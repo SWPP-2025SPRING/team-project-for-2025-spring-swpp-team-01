@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Bug
   - Flame
+  - Obstacle
   layers:
   - Default
   - TransparentFX
