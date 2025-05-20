@@ -92,6 +92,14 @@ public class PlayerMovement : MonoBehaviour
             {
                 bugFlier.ApproachTo(transform.position);
             }
+            else if (closestBug.TryGetComponent<AntMovement>(out var ant))
+            {
+                ant.ApproachTo(transform.position);
+            }
+            else if (closestBug.TryGetComponent<LadybugMovement>(out var ladybug))
+            {
+                ladybug.ApproachTo(transform.position);
+            }
         }
 
     }
@@ -124,6 +132,8 @@ public class PlayerMovement : MonoBehaviour
         // BugMovement or BugFlightMovement 모두 지원
         bug.GetComponent<BugMovement>()?.SetMounted(true);
         bug.GetComponent<BugFlightMovement>()?.SetMounted(true);
+        bug.GetComponent<AntMovement>()?.SetMounted(true);
+        bug.GetComponent<LadybugMovement>()?.SetMounted(true);
     }
 
     public void Unmount()
@@ -142,6 +152,8 @@ public class PlayerMovement : MonoBehaviour
 
         mountedBug.GetComponent<BugMovement>()?.SetMounted(false);
         mountedBug.GetComponent<BugFlightMovement>()?.SetMounted(false);
+        mountedBug.GetComponent<AntMovement>()?.SetMounted(false);
+        mountedBug.GetComponent<LadybugMovement>()?.SetMounted(false);
         mountedBug = null;
     }
 
