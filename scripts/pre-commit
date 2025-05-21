@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "▶️ Running dotnet format..."
+
+dotnet format --verify-no-changes > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ 코드 스타일 검사 실패! 포맷팅되지 않은 코드가 있습니다."
+  echo "   아래 명령어로 자동 정리할 수 있습니다:"
+  echo "   dotnet format"
+  exit 1
+fi
+
+echo "✅ 코드 스타일 확인 완료. 커밋 진행합니다."
