@@ -1,27 +1,24 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
-public class AntMovement : MonoBehaviour
+public class KatydidMovement : MonoBehaviour
 {
     public float moveSpeed = 3f;
-    public float rotationSpeed = 180f;
-    public float dashSpeed = 15f;           // 대시 속도
-    public float dashDuration = 0.2f;       // 대시 지속 시간
-    public float dashCooldown = 1f;         // 대시 쿨타임
+    public float jumpForce = 5f;
     public float obstacleCheckDist = 0.8f;
+    public float rotationSpeed = 180f;
     public LayerMask obstacleMask;
 
     private bool isMounted = false;
+    private readonly bool isJumping = false;
+    private bool isGrounded = true;
     private bool isApproaching = false;
-    private bool isDashing = false;
-    private bool canDash = true;
 
     private Rigidbody rb;
+    private Animator katydidAnimator;
+    private Coroutine jumpRoutine;
     private Coroutine approachRoutine;
-    private Animator antAnimator;
-
-
 
     void Awake()
     {
@@ -29,17 +26,7 @@ public class AntMovement : MonoBehaviour
         rb.useGravity = true;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        antAnimator = GetComponent<Animator>();
-    }
-
-    void Update()
-    {
-        if (!isMounted || isDashing || !canDash) return;
-
-        if (Input.GetKeyDown(KeyCode.LeftShift))
-        {
-            StartCoroutine(Dash());
-        }
+        katydidAnimator = GetComponent<Animator>();
     }
 
     void FixedUpdate()
@@ -49,66 +36,90 @@ public class AntMovement : MonoBehaviour
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
-
-        if (Mathf.Abs(v) > 0.01f && Mathf.Abs(h) > 0.01f)
+        if (Mathf.Abs(h) > 0.01f)
         {
             float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
             Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
             rb.MoveRotation(rb.rotation * deltaRotation);
         }
 
-
         if (Mathf.Abs(v) > 0.01f)
         {
             Vector3 forward = rb.rotation * Vector3.forward;
-
             Vector3 rayOrigin = transform.position + Vector3.up * 0.3f;
+
             if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
             {
                 Vector3 next = rb.position + forward * v * moveSpeed * Time.fixedDeltaTime;
                 rb.MovePosition(next);
             }
-            antAnimator.SetBool("is_walking", true);
+
+            // 점프 루틴 실행
+            if (jumpRoutine == null)
+                jumpRoutine = StartCoroutine(JumpWhenGrounded());
         }
         else
         {
-            antAnimator.SetBool("is_walking", false);
+            // 이동 중이 아니면 점프 중지
+            if (jumpRoutine != null)
+            {
+                StopCoroutine(jumpRoutine);
+                jumpRoutine = null;
+            }
         }
     }
 
-    IEnumerator Dash()
+    IEnumerator JumpWhenGrounded()
     {
-        isDashing = true;
-        canDash = false;
-
-        antAnimator?.SetTrigger("is_dashing");
-
-        Vector3 dashDir = rb.rotation * Vector3.forward;
-        float elapsed = 0f;
-
-        while (elapsed < dashDuration)
+        while (true)
         {
-            Vector3 next = rb.position + dashDir * dashSpeed * Time.fixedDeltaTime;
-            rb.MovePosition(next);
-            elapsed += Time.fixedDeltaTime;
-            yield return new WaitForFixedUpdate();
+            if (isGrounded)
+            {
+                katydidAnimator.SetTrigger("is_jumping");
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                isGrounded = false;
+            }
+            yield return null;
         }
+    }
 
-        isDashing = false;
+    void OnCollisionEnter(Collision col)
+    {
+        if (!isMounted) return;
 
-        yield return new WaitForSeconds(dashCooldown);
-        canDash = true;
+        if (col.gameObject.CompareTag("Obstacle"))
+        {
+            katydidAnimator?.SetTrigger("is_dropping");
+            Debug.Log("is_dropping triggered");
+
+            var player = GetComponentInChildren<PlayerMovement>();
+            player?.ForceFallFromBug();
+            SetMounted(false);
+        }
+        else if (col.contacts.Length > 0 && col.contacts[0].normal.y > 0.5f)
+        {
+            // 착지 판정
+            isGrounded = true;
+        }
     }
 
     public void SetMounted(bool mounted)
     {
         isMounted = mounted;
-        Debug.Log("Ant SetMounted called: " + mounted);
+
         if (!mounted)
         {
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+
+            if (jumpRoutine != null)
+            {
+                StopCoroutine(jumpRoutine);
+                jumpRoutine = null;
+            }
         }
+
+        isGrounded = true; // 탑승할 때 초기화
     }
 
     public void ApproachTo(Vector3 target)
@@ -133,17 +144,5 @@ public class AntMovement : MonoBehaviour
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         isApproaching = false;
-    }
-
-    void OnCollisionEnter(Collision col)
-    {
-        if (!isMounted) return;
-        if (!col.gameObject.CompareTag("Obstacle")) return;
-
-        var player = GetComponentInChildren<PlayerMovement>();
-        antAnimator?.SetTrigger("is_dropping");
-        Debug.Log("is_dropping performed");
-        player?.ForceFallFromBug();
-        SetMounted(false);
     }
 }
