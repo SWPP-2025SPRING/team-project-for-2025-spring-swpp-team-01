@@ -27,7 +27,7 @@ public class LadybugMovement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true; // ½ÃÀÛ ½Ã Áß·Â O
+        rb.useGravity = true; // ì‹œìž‘ ì‹œ ì¤‘ë ¥ O
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
@@ -42,11 +42,11 @@ public class LadybugMovement : MonoBehaviour
         float v = Input.GetAxis("Vertical");
         cachedInput = new Vector3(h, 0, v);
 
-        // ÀüÁø ¾Ö´Ï¸ÞÀÌ¼Ç ¼³Á¤
+        // ì „ì§„ ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •
         bool isWalking = Mathf.Abs(v) > 0.01f;
         animator?.SetBool("is_walking", isWalking);
 
-        // ºñÇà ÀÔ·Â
+        // ë¹„í–‰ ìž…ë ¥
         if (Input.GetKeyDown(KeyCode.Space) && canFly)
         {
             StartCoroutine(HandleFlight());
@@ -60,7 +60,7 @@ public class LadybugMovement : MonoBehaviour
         float h = cachedInput.x;
         float v = cachedInput.z;
 
-        // È¸Àü: ÀüÁø ÁßÀÏ ¶§¸¸
+        // íšŒì „: ì „ì§„ ì¤‘ì¼ ë•Œë§Œ
         if (Mathf.Abs(v) > 0.01f && Mathf.Abs(h) > 0.01f)
         {
             float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
@@ -68,7 +68,7 @@ public class LadybugMovement : MonoBehaviour
             rb.MoveRotation(rb.rotation * deltaRotation);
         }
 
-        // ÀüÁø
+        // ì „ì§„
         if (Mathf.Abs(v) > 0.01f)
         {
             Vector3 forward = rb.rotation * Vector3.forward;
@@ -100,7 +100,7 @@ public class LadybugMovement : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        
+
         yield return new WaitForSeconds(flightDuration);
 
         animator?.SetTrigger("is_descend");
@@ -113,14 +113,14 @@ public class LadybugMovement : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        
+
         rb.useGravity = true;
         isFlying = false;
         animator?.SetTrigger("descend_to_walk");
 
         yield return new WaitForSeconds(7f);
         canFly = true;
-        Debug.Log("Flight ended ¡æ canFly = true");
+        Debug.Log("Flight ended â†’ canFly = true");
 
     }
 

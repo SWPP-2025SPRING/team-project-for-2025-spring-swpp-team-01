@@ -9,14 +9,14 @@ public class FollowingCamera : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        transform.position = target.position + target.rotation*offset;
+        transform.position = target.position + target.rotation * offset;
         transform.LookAt(target);
     }
 
     // Update is called once per frame
     void Update()
     {
-        transform.position = target.position + target.rotation*offset;
+        transform.position = target.position + target.rotation * offset;
         transform.LookAt(target);
     }
 }

@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class PlayerAlcoholPenalty : MonoBehaviour
 {
-    public float stunRadius = 0.5f;           // °¨Áö ¹İ°æ
-    public float stunDuration = 5f;           // ½ºÅÏ ½Ã°£
+    public float stunRadius = 0.5f;           // ê°ì§€ ë°˜ê²½
+    public float stunDuration = 5f;           // ìŠ¤í„´ ì‹œê°„
     private bool isStunned = false;
 
     private PlayerMovement movementScript;
@@ -23,10 +23,10 @@ public class PlayerAlcoholPenalty : MonoBehaviour
 
             foreach (Collider hit in hits)
             {
-                if (hit.CompareTag("Flame")) // ÅÂ±×·Î ÆÇº°
+                if (hit.CompareTag("Flame")) // íƒœê·¸ë¡œ íŒë³„
                 {
                     StartCoroutine(Stun());
-                    Debug.Log("ºÒ²É Ãæµ¹!");
+                    Debug.Log("ë¶ˆê½ƒ ì¶©ëŒ!");
                     break;
                 }
             }

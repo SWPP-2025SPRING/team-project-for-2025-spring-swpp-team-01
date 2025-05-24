@@ -13,9 +13,12 @@ public class PlayerMovement : MonoBehaviour
     public Transform mountedBug;
     private bool isFalling = false;
 
+    private Animator animator;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        animator = GetComponent<Animator>();
     }
 
     void Update()
@@ -38,10 +41,15 @@ public class PlayerMovement : MonoBehaviour
 
         if (move.sqrMagnitude > 0.01f)
         {
+            animator.SetBool("is_running", true);
             Quaternion targetRotation = Quaternion.LookRotation(move.normalized, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 3f);
 
             controller.Move(move.normalized * speed * Time.deltaTime);
+        }
+        else
+        {
+            animator.SetBool("is_running", false); // ← 멈춤
         }
 
         if (controller.isGrounded && velocity.y < 0)
@@ -100,6 +108,14 @@ public class PlayerMovement : MonoBehaviour
             {
                 ladybug.ApproachTo(transform.position);
             }
+            else if (closestBug.TryGetComponent<KatydidMovement>(out var katydid))
+            {
+                katydid.ApproachTo(transform.position);
+            }
+            else if (closestBug.TryGetComponent<KatydidMovement>(out var pillbug))
+            {
+                pillbug.ApproachTo(transform.position);
+            }
         }
 
     }
@@ -125,15 +141,28 @@ public class PlayerMovement : MonoBehaviour
 
         controller.enabled = false;
         transform.SetParent(bug);
-        transform.localPosition = new Vector3(0, 1.2f, 0); 
+
+        if (bug.TryGetComponent<LadybugMovement>(out _))
+        {
+            transform.localPosition = new Vector3(0, -0.2f, 0.5f); //무당벌레 위치가 잘 안 맞아서 따로 설정하였습니다
+        }
+        else
+        {
+            transform.localPosition = new Vector3(0, -1.2f, 0);
+        }
 
         transform.rotation = bug.rotation;
+
+        animator.SetTrigger("is_riding");
+        animator.SetBool("is_riding_on_bug", true);
 
         // BugMovement or BugFlightMovement 모두 지원
         bug.GetComponent<BugMovement>()?.SetMounted(true);
         bug.GetComponent<BugFlightMovement>()?.SetMounted(true);
         bug.GetComponent<AntMovement>()?.SetMounted(true);
         bug.GetComponent<LadybugMovement>()?.SetMounted(true);
+        bug.GetComponent<KatydidMovement>()?.SetMounted(true);
+        bug.GetComponent<PillbugMovement>()?.SetMounted(true);
     }
 
     public void Unmount()
@@ -150,10 +179,14 @@ public class PlayerMovement : MonoBehaviour
 
         controller.enabled = true;
 
+        animator.SetBool("is_riding_on_bug", false);
+
         mountedBug.GetComponent<BugMovement>()?.SetMounted(false);
         mountedBug.GetComponent<BugFlightMovement>()?.SetMounted(false);
         mountedBug.GetComponent<AntMovement>()?.SetMounted(false);
         mountedBug.GetComponent<LadybugMovement>()?.SetMounted(false);
+        mountedBug.GetComponent<KatydidMovement>()?.SetMounted(false);
+        mountedBug.GetComponent<PillbugMovement>()?.SetMounted(false);
         mountedBug = null;
     }
 
@@ -161,6 +194,7 @@ public class PlayerMovement : MonoBehaviour
     {
         isFalling = true;
         controller.enabled = false;
+        animator.SetTrigger("is_falling");
         StartCoroutine(SimulateFall());
         Debug.Log("장애물과 충돌하여 추락");
     }
