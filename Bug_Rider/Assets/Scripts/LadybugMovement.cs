@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LadybugMovement : MonoBehaviour
+public class LadybugMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 4f;
     public float rotationSpeed = 180f;
