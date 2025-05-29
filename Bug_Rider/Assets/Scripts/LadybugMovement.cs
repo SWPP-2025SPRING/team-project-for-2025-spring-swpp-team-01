@@ -27,7 +27,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true; 
+        rb.useGravity = true; // 시작 시 중력 O
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
@@ -42,7 +42,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         float v = Input.GetAxis("Vertical");
         cachedInput = new Vector3(h, 0, v);
 
-        
+        // 전진 애니메이션 설정
         bool isWalking = Mathf.Abs(v) > 0.01f;
         animator?.SetBool("is_walking", isWalking);
 
@@ -68,7 +68,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             rb.MoveRotation(rb.rotation * deltaRotation);
         }
 
-        
+        // 전진
         if (Mathf.Abs(v) > 0.01f)
         {
             Vector3 forward = rb.rotation * Vector3.forward;
@@ -98,7 +98,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
         float timer = 0f;
 
-        
+        // 비행 애니메이션 시작
         animator?.SetTrigger("is_ascend");
 
         while (timer < flightDuration)
@@ -107,10 +107,12 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
             if (Input.GetKey(KeyCode.Space))
             {
+                // 상승
                 targetY += ascendSpeed * Time.fixedDeltaTime;
             }
             else
             {
+                // 하강
                 targetY -= descendSpeed * Time.fixedDeltaTime;
             }
 
@@ -124,7 +126,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             yield return new WaitForFixedUpdate();
         }
 
-        
+        // 자동 하강
         animator?.SetTrigger("is_descend");
         while (rb.position.y > groundY + 0.05f)
         {
