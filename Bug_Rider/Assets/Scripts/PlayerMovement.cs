@@ -96,7 +96,15 @@ public class PlayerMovement : MonoBehaviour
         controller.enabled = false;
         transform.SetParent(bug);
 
-        transform.localPosition = new Vector3(0, -1.2f, 0);
+        if (bug.TryGetComponent<LadybugMovement>(out _))
+        {
+            transform.localPosition = new Vector3(0, -0.2f, 0.5f); //무당벌레 위치가 잘 안 맞아서 따로 설정하였습니다
+        }
+        else
+        {
+            transform.localPosition = new Vector3(0, -1.2f, 0);
+        }
+
         transform.rotation = bug.rotation;
 
         animator.SetTrigger("is_riding");
@@ -147,6 +155,7 @@ public class PlayerMovement : MonoBehaviour
         float fallDuration = 2f;
         float fallSpeed = -10f;
         float elapsed = 0f;
+        animator.SetTrigger("is_falling");
         while (elapsed < fallDuration)
         {
             velocity = new Vector3(0, fallSpeed, 0);

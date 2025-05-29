@@ -27,7 +27,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true; // ½ÃÀÛ ½Ã Áß·Â O
+        rb.useGravity = true; 
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
@@ -42,11 +42,11 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         float v = Input.GetAxis("Vertical");
         cachedInput = new Vector3(h, 0, v);
 
-        // ÀüÁø ¾Ö´Ï¸ÞÀÌ¼Ç ¼³Á¤
+        
         bool isWalking = Mathf.Abs(v) > 0.01f;
         animator?.SetBool("is_walking", isWalking);
 
-        // ºñÇà ÀÔ·Â
+        // ë¹„í–‰ ìž…ë ¥
         if (Input.GetKeyDown(KeyCode.Space) && canFly)
         {
             StartCoroutine(HandleFlight());
@@ -60,7 +60,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         float h = cachedInput.x;
         float v = cachedInput.z;
 
-        // È¸Àü: ÀüÁø ÁßÀÏ ¶§¸¸
+        // íšŒì „: ì „ì§„ ì¤‘ì¼ ë•Œë§Œ
         if (Mathf.Abs(v) > 0.01f && Mathf.Abs(h) > 0.01f)
         {
             float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
@@ -68,7 +68,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             rb.MoveRotation(rb.rotation * deltaRotation);
         }
 
-        // ÀüÁø
+        
         if (Mathf.Abs(v) > 0.01f)
         {
             Vector3 forward = rb.rotation * Vector3.forward;
@@ -88,24 +88,45 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         isFlying = true;
         canFly = false;
 
-        animator?.SetTrigger("is_ascend");
         rb.useGravity = false;
 
         float ascendSpeed = 3f;
-        while (rb.position.y < flightHeight - 0.05f)
+        float descendSpeed = 2f;
+
+        float maxFlightHeight = groundY + 4f;
+        float minFlightHeight = groundY + 0.5f;
+
+        float timer = 0f;
+
+        
+        animator?.SetTrigger("is_ascend");
+
+        while (timer < flightDuration)
         {
+            float targetY = rb.position.y;
+
+            if (Input.GetKey(KeyCode.Space))
+            {
+                targetY += ascendSpeed * Time.fixedDeltaTime;
+            }
+            else
+            {
+                targetY -= descendSpeed * Time.fixedDeltaTime;
+            }
+
+            targetY = Mathf.Clamp(targetY, minFlightHeight, maxFlightHeight);
+
             Vector3 pos = rb.position;
-            pos.y = Mathf.MoveTowards(pos.y, flightHeight, ascendSpeed * Time.fixedDeltaTime);
+            pos.y = Mathf.MoveTowards(rb.position.y, targetY, (ascendSpeed + descendSpeed) * 0.5f * Time.fixedDeltaTime);
             rb.MovePosition(pos);
+
+            timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
         
-        yield return new WaitForSeconds(flightDuration);
-
         animator?.SetTrigger("is_descend");
-        float descendSpeed = 2f;
-        while (rb.position.y > groundY)
+        while (rb.position.y > groundY + 0.05f)
         {
             Vector3 pos = rb.position;
             pos.y = Mathf.MoveTowards(pos.y, groundY, descendSpeed * Time.fixedDeltaTime);
@@ -113,16 +134,18 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             yield return new WaitForFixedUpdate();
         }
 
-        
         rb.useGravity = true;
         isFlying = false;
         animator?.SetTrigger("descend_to_walk");
 
+        // ì¿¨íƒ€ìž„ 7ì´ˆ
         yield return new WaitForSeconds(7f);
         canFly = true;
-        Debug.Log("Flight ended ¡æ canFly = true");
 
+        Debug.Log("Flight ended â†’ canFly = true");
     }
+
+
 
 
 
