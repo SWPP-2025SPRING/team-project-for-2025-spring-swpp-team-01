@@ -1,16 +1,20 @@
 using UnityEngine;
 using System.Collections;
+using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
-public class AntMovement : MonoBehaviour
+public class AntMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 3f;
     public float rotationSpeed = 180f;
     public float dashSpeed = 15f;           // 대시 속도
-    public float dashDuration = 0.2f;       // 대시 지속 시간
+    public float dashDuration = 0.4f;       // 대시 지속 시간
     public float dashCooldown = 1f;         // 대시 쿨타임
     public float obstacleCheckDist = 0.8f;
     public LayerMask obstacleMask;
+    public GameObject DashUI;
+    public TMP_Text countdownText;
+
 
     private bool isMounted = false;
     private bool isApproaching = false;
@@ -30,6 +34,7 @@ public class AntMovement : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         antAnimator = GetComponent<Animator>();
+        DashUI?.SetActive(false);
     }
 
     void Update()
@@ -80,6 +85,7 @@ public class AntMovement : MonoBehaviour
     {
         isDashing = true;
         canDash = false;
+        DashUI?.SetActive(false);
 
         antAnimator?.SetTrigger("is_dashing");
 
@@ -96,7 +102,16 @@ public class AntMovement : MonoBehaviour
 
         isDashing = false;
 
-        yield return new WaitForSeconds(dashCooldown);
+        float countdown = dashCooldown;
+        while (countdown > 0 && isMounted)
+        {
+            countdownText.text = $"You can dash after {Mathf.Ceil(countdown)}s";
+            countdown -= Time.deltaTime;
+            yield return null;
+        }
+
+        countdownText.text = "";
+        DashUI?.SetActive(isMounted);
         canDash = true;
     }
 
@@ -108,6 +123,11 @@ public class AntMovement : MonoBehaviour
         {
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+            DashUI?.SetActive(false);
+        }
+        else
+        {
+            DashUI?.SetActive(true);
         }
     }
 

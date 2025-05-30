@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PillbugMovement : MonoBehaviour
+public class PillbugMovement : MonoBehaviour, IRideableBug
 {
     public float baseSpeed = 2f;
     public float accelerationRate = 2f;

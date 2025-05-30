@@ -25,10 +25,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isMounted)
         {
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                Unmount();
-            }
+            if (Input.GetKeyDown(KeyCode.E)) Unmount();
             return;
         }
 
@@ -36,7 +33,6 @@ public class PlayerMovement : MonoBehaviour
         float z = Input.GetAxis("Vertical");
         Vector3 move = transform.right * x + transform.forward * z;
         move.y = 0f;
-
         float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
 
         if (move.sqrMagnitude > 0.01f)
@@ -44,93 +40,51 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("is_running", true);
             Quaternion targetRotation = Quaternion.LookRotation(move.normalized, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 3f);
-
             controller.Move(move.normalized * speed * Time.deltaTime);
         }
-        else
-        {
-            animator.SetBool("is_running", false); // ← 멈춤
-        }
+        else animator.SetBool("is_running", false);
 
-        if (controller.isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f;
-        }
-
+        if (controller.isGrounded && velocity.y < 0) velocity.y = -2f;
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
 
-        if (Input.GetKeyDown(KeyCode.F))
-        {
-            TryCallBug();
-        }
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            TryMount();
-        }
+        if (Input.GetKeyDown(KeyCode.F)) TryCallBug();
+        if (Input.GetKeyDown(KeyCode.E)) TryMount();
     }
 
     void TryCallBug()
     {
         float searchRadius = 20f;
         Collider[] hits = Physics.OverlapSphere(transform.position, searchRadius);
-        Transform closestBug = null;
+        Transform closest = null;
         float minDist = Mathf.Infinity;
 
         foreach (var hit in hits)
         {
-            if (hit.CompareTag("Bug"))
+            if (!hit.CompareTag("Bug")) continue;
+            float dist = Vector3.Distance(transform.position, hit.transform.position);
+            if (dist < minDist)
             {
-                float dist = Vector3.Distance(transform.position, hit.transform.position);
-                if (dist < minDist)
-                {
-                    minDist = dist;
-                    closestBug = hit.transform;
-                }
+                minDist = dist;
+                closest = hit.transform;
             }
         }
 
-        if (closestBug != null)
+        if (closest && closest.TryGetComponent<IRideableBug>(out var rideable))
         {
-            if (closestBug.TryGetComponent<BugMovement>(out var bugMover))
-            {
-                bugMover.ApproachTo(transform.position);
-            }
-            else if (closestBug.TryGetComponent<BugFlightMovement>(out var bugFlier))
-            {
-                bugFlier.ApproachTo(transform.position);
-            }
-            else if (closestBug.TryGetComponent<AntMovement>(out var ant))
-            {
-                ant.ApproachTo(transform.position);
-            }
-            else if (closestBug.TryGetComponent<LadybugMovement>(out var ladybug))
-            {
-                ladybug.ApproachTo(transform.position);
-            }
-            else if (closestBug.TryGetComponent<KatydidMovement>(out var katydid))
-            {
-                katydid.ApproachTo(transform.position);
-            }
-            else if (closestBug.TryGetComponent<KatydidMovement>(out var pillbug))
-            {
-                pillbug.ApproachTo(transform.position);
-            }
+            rideable.ApproachTo(transform.position);
         }
-
     }
 
     void TryMount()
     {
-        float checkRadius = 2f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, checkRadius);
+        float radius = 2f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
         foreach (var hit in hits)
         {
-            if (hit.CompareTag("Bug"))
-            {
-                Mount(hit.transform);
-                break;
-            }
+            if (!hit.CompareTag("Bug")) continue;
+            Mount(hit.transform);
+            break;
         }
     }
 
@@ -156,13 +110,8 @@ public class PlayerMovement : MonoBehaviour
         animator.SetTrigger("is_riding");
         animator.SetBool("is_riding_on_bug", true);
 
-        // BugMovement or BugFlightMovement 모두 지원
-        bug.GetComponent<BugMovement>()?.SetMounted(true);
-        bug.GetComponent<BugFlightMovement>()?.SetMounted(true);
-        bug.GetComponent<AntMovement>()?.SetMounted(true);
-        bug.GetComponent<LadybugMovement>()?.SetMounted(true);
-        bug.GetComponent<KatydidMovement>()?.SetMounted(true);
-        bug.GetComponent<PillbugMovement>()?.SetMounted(true);
+        if (bug.TryGetComponent<IRideableBug>(out var rideable))
+            rideable.SetMounted(true);
     }
 
     public void Unmount()
@@ -170,23 +119,16 @@ public class PlayerMovement : MonoBehaviour
         if (!isMounted || mountedBug == null) return;
 
         isMounted = false;
-
         Vector3 dismountPos = mountedBug.position + mountedBug.right * 1.5f;
         transform.SetParent(null);
         transform.position = dismountPos;
-
         transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-
         controller.enabled = true;
-
         animator.SetBool("is_riding_on_bug", false);
 
-        mountedBug.GetComponent<BugMovement>()?.SetMounted(false);
-        mountedBug.GetComponent<BugFlightMovement>()?.SetMounted(false);
-        mountedBug.GetComponent<AntMovement>()?.SetMounted(false);
-        mountedBug.GetComponent<LadybugMovement>()?.SetMounted(false);
-        mountedBug.GetComponent<KatydidMovement>()?.SetMounted(false);
-        mountedBug.GetComponent<PillbugMovement>()?.SetMounted(false);
+        if (mountedBug.TryGetComponent<IRideableBug>(out var rideable))
+            rideable.SetMounted(false);
+
         mountedBug = null;
     }
 
@@ -194,7 +136,6 @@ public class PlayerMovement : MonoBehaviour
     {
         isFalling = true;
         controller.enabled = false;
-        animator.SetTrigger("is_falling");
         StartCoroutine(SimulateFall());
         Debug.Log("장애물과 충돌하여 추락");
     }
@@ -214,6 +155,7 @@ public class PlayerMovement : MonoBehaviour
         float fallDuration = 2f;
         float fallSpeed = -10f;
         float elapsed = 0f;
+        animator.SetTrigger("is_falling");
         while (elapsed < fallDuration)
         {
             velocity = new Vector3(0, fallSpeed, 0);
@@ -240,4 +182,3 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 }
-
