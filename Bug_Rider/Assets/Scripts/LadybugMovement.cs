@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class LadybugMovement : MonoBehaviour, IRideableBug
 {
@@ -8,9 +9,10 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
     public float rotationSpeed = 180f;
     public float flightHeight = 2f;
     public float flightDuration = 5f;
-
     public float obstacleCheckDist = 0.8f;
     public LayerMask obstacleMask;
+    public GameObject FlyUI;
+    public TMP_Text countdownText;
 
     private bool isMounted = false;
     private bool isFlying = false;
@@ -32,6 +34,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
+        FlyUI.SetActive(false);
     }
 
     void Update()
@@ -98,11 +101,17 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
         float timer = 0f;
 
+        FlyUI.SetActive(false);
+
         // 비행 애니메이션 시작
         animator?.SetTrigger("is_ascend");
 
-        while (timer < flightDuration)
+        countdownText.color = new Color(1f, 0.23f, 0.23f);
+
+        while (timer < flightDuration && isMounted)
         {
+            countdownText.text = $"You can fly for {Mathf.Ceil(flightDuration - timer)}s";
+
             float targetY = rb.position.y;
 
             if (Input.GetKey(KeyCode.Space))
@@ -140,9 +149,20 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         isFlying = false;
         animator?.SetTrigger("descend_to_walk");
 
+        countdownText.color = new Color(0.23f, 0.55f, 1f);
+
         // 쿨타임 7초
-        yield return new WaitForSeconds(7f);
+        float cooldown = 7f;
+        while (cooldown > 0 && isMounted)
+        {
+            countdownText.text = $"You can fly after {Mathf.Ceil(cooldown)}s";
+            cooldown -= Time.deltaTime;
+            yield return null;
+        }
+
+        countdownText.text = "";
         canFly = true;
+        FlyUI.SetActive(isMounted);
 
         Debug.Log("Flight ended → canFly = true");
     }
@@ -160,6 +180,11 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             cachedInput = Vector3.zero;
             animator?.SetBool("is_walking", false);
+            FlyUI.SetActive(false);
+        }
+        else
+        {
+            FlyUI.SetActive(true);
         }
     }
 

@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
 public class KatydidMovement : MonoBehaviour, IRideableBug
@@ -9,8 +10,10 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
     public float obstacleCheckDist = 0.8f;
     public float rotationSpeed = 180f;
     public float jumpCooldown = 3f;
+
     public LayerMask obstacleMask;
     public GameObject shiftJumpUI;
+    public TMP_Text countdownText;
 
     private bool isMounted = false;
     private readonly bool isJumping = false;
@@ -100,7 +103,16 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
 
     IEnumerator JumpBoostCooldown()
     {
-        yield return new WaitForSeconds(jumpCooldown);
+        float countdown = jumpCooldown;
+
+        while (countdown > 0)
+        {
+            countdownText.text = $"You can jump after {Mathf.Ceil(countdown)}s";
+            countdown -= Time.deltaTime;
+            yield return null;
+        }
+
+        countdownText.text = "";
         canJump = true;
         shiftJumpUI?.SetActive(true);
     }
