@@ -1,16 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
-public class LadybugMovement : MonoBehaviour
+public class LadybugMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 4f;
     public float rotationSpeed = 180f;
     public float flightHeight = 2f;
     public float flightDuration = 5f;
-
     public float obstacleCheckDist = 0.8f;
     public LayerMask obstacleMask;
+    public GameObject FlyUI;
+    public TMP_Text countdownText;
 
     private bool isMounted = false;
     private bool isFlying = false;
@@ -32,6 +34,7 @@ public class LadybugMovement : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
+        FlyUI.SetActive(false);
     }
 
     void Update()
@@ -88,24 +91,53 @@ public class LadybugMovement : MonoBehaviour
         isFlying = true;
         canFly = false;
 
-        animator?.SetTrigger("is_ascend");
         rb.useGravity = false;
 
         float ascendSpeed = 3f;
-        while (rb.position.y < flightHeight - 0.05f)
+        float descendSpeed = 2f;
+
+        float maxFlightHeight = groundY + 4f;
+        float minFlightHeight = groundY + 0.5f;
+
+        float timer = 0f;
+
+        FlyUI.SetActive(false);
+
+        // 비행 애니메이션 시작
+        animator?.SetTrigger("is_ascend");
+
+        countdownText.color = new Color(1f, 0.23f, 0.23f);
+
+        while (timer < flightDuration && isMounted)
         {
+            countdownText.text = $"You can fly for {Mathf.Ceil(flightDuration - timer)}s";
+
+            float targetY = rb.position.y;
+
+            if (Input.GetKey(KeyCode.Space))
+            {
+                // 상승
+                targetY += ascendSpeed * Time.fixedDeltaTime;
+            }
+            else
+            {
+                // 하강
+                targetY -= descendSpeed * Time.fixedDeltaTime;
+            }
+
+            targetY = Mathf.Clamp(targetY, minFlightHeight, maxFlightHeight);
+
             Vector3 pos = rb.position;
-            pos.y = Mathf.MoveTowards(pos.y, flightHeight, ascendSpeed * Time.fixedDeltaTime);
+            pos.y = Mathf.MoveTowards(rb.position.y, targetY, (ascendSpeed + descendSpeed) * 0.5f * Time.fixedDeltaTime);
             rb.MovePosition(pos);
+
+            timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
-
-        yield return new WaitForSeconds(flightDuration);
-
+        // 자동 하강
         animator?.SetTrigger("is_descend");
-        float descendSpeed = 2f;
-        while (rb.position.y > groundY)
+        while (rb.position.y > groundY + 0.05f)
         {
             Vector3 pos = rb.position;
             pos.y = Mathf.MoveTowards(pos.y, groundY, descendSpeed * Time.fixedDeltaTime);
@@ -113,16 +145,29 @@ public class LadybugMovement : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-
         rb.useGravity = true;
         isFlying = false;
         animator?.SetTrigger("descend_to_walk");
 
-        yield return new WaitForSeconds(7f);
-        canFly = true;
-        Debug.Log("Flight ended → canFly = true");
+        countdownText.color = new Color(0.23f, 0.55f, 1f);
 
+        // 쿨타임 7초
+        float cooldown = 7f;
+        while (cooldown > 0 && isMounted)
+        {
+            countdownText.text = $"You can fly after {Mathf.Ceil(cooldown)}s";
+            cooldown -= Time.deltaTime;
+            yield return null;
+        }
+
+        countdownText.text = "";
+        canFly = true;
+        FlyUI.SetActive(isMounted);
+
+        Debug.Log("Flight ended → canFly = true");
     }
+
+
 
 
 
@@ -135,6 +180,11 @@ public class LadybugMovement : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
             cachedInput = Vector3.zero;
             animator?.SetBool("is_walking", false);
+            FlyUI.SetActive(false);
+        }
+        else
+        {
+            FlyUI.SetActive(true);
         }
     }
 
