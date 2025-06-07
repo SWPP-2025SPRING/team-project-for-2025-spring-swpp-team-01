@@ -129,6 +129,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
+            Destroy(gameObject, 2f);
         }
         else if (col.contacts.Length > 0 && col.contacts[0].normal.y > 0.5f)
         {
@@ -156,6 +157,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         else
         {
             shiftJumpUI?.SetActive(true);
+            Destroy(GetComponent<MoveToTarget>());
         }
 
         isGrounded = true; // 탑승할 때 초기화

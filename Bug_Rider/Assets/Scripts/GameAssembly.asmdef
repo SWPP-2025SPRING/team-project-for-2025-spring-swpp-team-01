@@ -1,0 +1,10 @@
+{
+  "name": "GameAssembly",
+  "references": [
+    "Unity.TextMeshPro"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false
+}
+

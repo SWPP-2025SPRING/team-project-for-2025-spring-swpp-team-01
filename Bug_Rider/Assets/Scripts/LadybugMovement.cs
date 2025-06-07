@@ -1,190 +1,80 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+[RequireComponent(typeof(Rigidbody))]
 public class LadybugMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 4f;
     public float rotationSpeed = 180f;
-    public float flightHeight = 2f;
-    public float flightDuration = 5f;
     public float obstacleCheckDist = 0.8f;
+    public float flightHeight = 2f;
+
     public LayerMask obstacleMask;
     public GameObject FlyUI;
     public TMP_Text countdownText;
 
     private bool isMounted = false;
-    private bool isFlying = false;
-    private bool canFly = true;
-    bool isApproaching;
+    private bool isApproaching = false;
 
     private Rigidbody rb;
     private Animator animator;
 
-    private Vector3 cachedInput = Vector3.zero;
+    private Coroutine approachRoutine;
 
-    Coroutine approachRoutine;
+    private IBugMovementStrategy walkStrategy;
+    private FlyMovementStrategy flyStrategy;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true; // 시작 시 중력 O
+        rb.useGravity = true;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
-        FlyUI.SetActive(false);
+
+        walkStrategy = new WalkMovementStrategy();
+        flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
+
+        FlyUI?.SetActive(false);
     }
 
     void Update()
     {
         if (!isMounted) return;
 
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-        cachedInput = new Vector3(h, 0, v);
-
-        // 전진 애니메이션 설정
-        bool isWalking = Mathf.Abs(v) > 0.01f;
-        animator?.SetBool("is_walking", isWalking);
-
-        // 비행 입력
-        if (Input.GetKeyDown(KeyCode.Space) && canFly)
+        if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
-            StartCoroutine(HandleFlight());
+            flyStrategy.StartFlight();
         }
     }
 
     void FixedUpdate()
     {
-        if (!isMounted) return;
+        if (!isMounted || isApproaching) return;
 
-        float h = cachedInput.x;
-        float v = cachedInput.z;
+        // Handle walking
+        walkStrategy.HandleMovement(rb, animator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
 
-        // 회전: 전진 중일 때만
-        if (Mathf.Abs(v) > 0.01f && Mathf.Abs(h) > 0.01f)
-        {
-            float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
-            Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
-            rb.MoveRotation(rb.rotation * deltaRotation);
-        }
-
-        // 전진
-        if (Mathf.Abs(v) > 0.01f)
-        {
-            Vector3 forward = rb.rotation * Vector3.forward;
-            Vector3 rayOrigin = transform.position + Vector3.up * 0.3f;
-
-            if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
-            {
-                Vector3 next = rb.position + forward * v * moveSpeed * Time.fixedDeltaTime;
-                rb.MovePosition(next);
-            }
-        }
+        // Handle flight
+        flyStrategy.HandleMovement(rb, animator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
     }
-
-    IEnumerator HandleFlight()
-    {
-        float groundY = rb.position.y;
-        isFlying = true;
-        canFly = false;
-
-        rb.useGravity = false;
-
-        float ascendSpeed = 3f;
-        float descendSpeed = 2f;
-
-        float maxFlightHeight = groundY + 4f;
-        float minFlightHeight = groundY + 0.5f;
-
-        float timer = 0f;
-
-        FlyUI.SetActive(false);
-
-        // 비행 애니메이션 시작
-        animator?.SetTrigger("is_ascend");
-
-        countdownText.color = new Color(1f, 0.23f, 0.23f);
-
-        while (timer < flightDuration && isMounted)
-        {
-            countdownText.text = $"You can fly for {Mathf.Ceil(flightDuration - timer)}s";
-
-            float targetY = rb.position.y;
-
-            if (Input.GetKey(KeyCode.Space))
-            {
-                // 상승
-                targetY += ascendSpeed * Time.fixedDeltaTime;
-            }
-            else
-            {
-                // 하강
-                targetY -= descendSpeed * Time.fixedDeltaTime;
-            }
-
-            targetY = Mathf.Clamp(targetY, minFlightHeight, maxFlightHeight);
-
-            Vector3 pos = rb.position;
-            pos.y = Mathf.MoveTowards(rb.position.y, targetY, (ascendSpeed + descendSpeed) * 0.5f * Time.fixedDeltaTime);
-            rb.MovePosition(pos);
-
-            timer += Time.fixedDeltaTime;
-            yield return new WaitForFixedUpdate();
-        }
-
-        // 자동 하강
-        animator?.SetTrigger("is_descend");
-        while (rb.position.y > groundY + 0.05f)
-        {
-            Vector3 pos = rb.position;
-            pos.y = Mathf.MoveTowards(pos.y, groundY, descendSpeed * Time.fixedDeltaTime);
-            rb.MovePosition(pos);
-            yield return new WaitForFixedUpdate();
-        }
-
-        rb.useGravity = true;
-        isFlying = false;
-        animator?.SetTrigger("descend_to_walk");
-
-        countdownText.color = new Color(0.23f, 0.55f, 1f);
-
-        // 쿨타임 7초
-        float cooldown = 7f;
-        while (cooldown > 0 && isMounted)
-        {
-            countdownText.text = $"You can fly after {Mathf.Ceil(cooldown)}s";
-            cooldown -= Time.deltaTime;
-            yield return null;
-        }
-
-        countdownText.text = "";
-        canFly = true;
-        FlyUI.SetActive(isMounted);
-
-        Debug.Log("Flight ended → canFly = true");
-    }
-
-
-
-
 
     public void SetMounted(bool mounted)
     {
         isMounted = mounted;
+
         if (!mounted)
         {
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            cachedInput = Vector3.zero;
             animator?.SetBool("is_walking", false);
-            FlyUI.SetActive(false);
+            FlyUI?.SetActive(false);
         }
         else
         {
-            FlyUI.SetActive(true);
+            FlyUI?.SetActive(true);
+            Destroy(GetComponent<MoveToTarget>());
         }
     }
 
@@ -194,10 +84,11 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         approachRoutine = StartCoroutine(MoveToTarget(target));
     }
 
-    IEnumerator MoveToTarget(Vector3 target)
+    private System.Collections.IEnumerator MoveToTarget(Vector3 target)
     {
-        isMounted = false;
+        SetMounted(false);
         isApproaching = true;
+
         while (Vector3.Distance(transform.position, target) > 1.5f)
         {
             Vector3 dir = (target - transform.position).normalized;
@@ -206,18 +97,28 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             rb.MovePosition(next);
             yield return new WaitForFixedUpdate();
         }
-        rb.velocity = rb.angularVelocity = Vector3.zero;
+
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
         isApproaching = false;
     }
 
     void OnCollisionEnter(Collision col)
     {
-        Debug.Log($"[BugFlight] hit {col.gameObject.name}");
         if (!isMounted) return;
-        if (!col.gameObject.CompareTag("Obstacle")) return;
-        var player = GetComponentInChildren<PlayerMovement>();
-        animator.SetTrigger("is_drop");
-        player?.ForceFallFromBug();
-        SetMounted(false);
+
+        if (col.gameObject.CompareTag("Obstacle"))
+        {
+            animator?.SetTrigger("is_drop");
+
+            flyStrategy.StopFlight();
+            FlyUI?.SetActive(false); 
+
+            var player = GetComponentInChildren<PlayerMovement>();
+            player?.ForceFallFromBug();
+            SetMounted(false);
+            Destroy(gameObject, 2f);
+        }
     }
+
 }

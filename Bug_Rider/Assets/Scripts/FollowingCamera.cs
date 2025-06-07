@@ -5,18 +5,14 @@ using UnityEngine;
 public class FollowingCamera : MonoBehaviour
 {
     public Transform target;
-    public Vector3 offset = new Vector3(0, 2, 3);
-    // Start is called before the first frame update
-    void Start()
-    {
-        transform.position = target.position + target.rotation * offset;
-        transform.LookAt(target);
-    }
+    public Vector3 offset = new Vector3(0, 2, -4); // 뒤쪽 offset
+    public float smoothSpeed = 5f;
 
-    // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
-        transform.position = target.position + target.rotation * offset;
+        Vector3 desiredPosition = target.position + target.rotation * offset;
+        transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * smoothSpeed);
         transform.LookAt(target);
     }
 }
+

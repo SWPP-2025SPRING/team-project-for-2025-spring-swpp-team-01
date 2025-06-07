@@ -29,25 +29,36 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-        Vector3 move = transform.right * x + transform.forward * z;
-        move.y = 0f;
-        float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        float x = Input.GetAxis("Horizontal");  // A/D
+        float z = Input.GetAxis("Vertical");    // W/S
 
-        if (move.sqrMagnitude > 0.01f)
+        // 이동 처리
+        if (Mathf.Abs(z) > 0.1f)
         {
+            Vector3 move = transform.forward * z;
+            controller.Move(move * walkSpeed * Time.deltaTime);
             animator.SetBool("is_running", true);
-            Quaternion targetRotation = Quaternion.LookRotation(move.normalized, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 3f);
-            controller.Move(move.normalized * speed * Time.deltaTime);
         }
-        else animator.SetBool("is_running", false);
+        else
+        {
+            animator.SetBool("is_running", false);
+        }
 
-        if (controller.isGrounded && velocity.y < 0) velocity.y = -2f;
+        // 회전 처리 (A/D 입력만 처리)
+        if (Mathf.Abs(x) > 0.1f)
+        {
+            float rotationSpeed = 180f; // 회전 속도
+            transform.Rotate(0f, x * rotationSpeed * Time.deltaTime, 0f);
+        }
+
+        // 중력 및 추락 처리 유지
+        if (controller.isGrounded && velocity.y < 0)
+            velocity.y = -2f;
+
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
 
+        // 탑승 관련 키 처리 유지
         if (Input.GetKeyDown(KeyCode.F)) TryCallBug();
         if (Input.GetKeyDown(KeyCode.E)) TryMount();
     }
@@ -78,7 +89,7 @@ public class PlayerMovement : MonoBehaviour
 
     void TryMount()
     {
-        float radius = 2f;
+        float radius = 0.05f;
         Collider[] hits = Physics.OverlapSphere(transform.position, radius);
         foreach (var hit in hits)
         {
@@ -119,10 +130,9 @@ public class PlayerMovement : MonoBehaviour
         if (!isMounted || mountedBug == null) return;
 
         isMounted = false;
-        Vector3 dismountPos = mountedBug.position + mountedBug.right * 1.5f;
+        Vector3 dismountPos = transform.position - transform.forward * 0.05f;
         transform.SetParent(null);
         transform.position = dismountPos;
-        transform.rotation = Quaternion.Euler(0f, 0f, 0f);
         controller.enabled = true;
         animator.SetBool("is_riding_on_bug", false);
 
@@ -140,7 +150,7 @@ public class PlayerMovement : MonoBehaviour
         Debug.Log("장애물과 충돌하여 추락");
     }
 
-    public void ForceFallFromBug()
+    public virtual void ForceFallFromBug()
     {
         if (isMounted)
         {
