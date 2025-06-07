@@ -119,10 +119,10 @@ public class PlayerMovement : MonoBehaviour
         if (!isMounted || mountedBug == null) return;
 
         isMounted = false;
-        Vector3 dismountPos = mountedBug.position + mountedBug.right * 1.5f;
+        Vector3 dismountPos = mountedBug.position + (-mountedBug.forward) * 1.5f;
         transform.SetParent(null);
         transform.position = dismountPos;
-        transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        // transform.rotation = Quaternion.Euler(0f, 0f, 0f);
         controller.enabled = true;
         animator.SetBool("is_riding_on_bug", false);
 
