@@ -2,12 +2,12 @@ using UnityEngine;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
-public class LadybugMovement : MonoBehaviour, IRideableBug
+public class ButterflyMovement : MonoBehaviour, IRideableBug
 {
-    public float moveSpeed = 4f;
-    public float rotationSpeed = 180f;
-    public float obstacleCheckDist = 0.8f;
-    public float flightHeight = 2f;
+    public float moveSpeed = 5f;
+    public float rotationSpeed = 200f;
+    public float obstacleCheckDist = 1f;
+    public float flightHeight = 3f;
 
     public LayerMask obstacleMask;
     public GameObject FlyUI;
@@ -23,6 +23,8 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
     private IBugMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
+    private PlayerMovement mountedPlayer;  // 추가
+
 
     void Awake()
     {
@@ -34,7 +36,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         animator = GetComponent<Animator>();
 
         walkStrategy = new WalkMovementStrategy();
-        flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
+        flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator, true);
 
         FlyUI?.SetActive(false);
     }
@@ -53,10 +55,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
     {
         if (!isMounted || isApproaching) return;
 
-        // Handle walking
         walkStrategy.HandleMovement(rb, animator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
-
-        // Handle flight
         flyStrategy.HandleMovement(rb, animator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
     }
 
@@ -74,6 +73,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         else
         {
             FlyUI?.SetActive(true);
+            mountedPlayer = GetComponentInChildren<PlayerMovement>();
         }
     }
 
@@ -111,12 +111,11 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             animator?.SetTrigger("is_drop");
 
             flyStrategy.StopFlight();
-            FlyUI?.SetActive(false);
+            FlyUI?.SetActive(false); 
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
         }
     }
-
 }
