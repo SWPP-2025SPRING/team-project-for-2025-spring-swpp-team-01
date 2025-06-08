@@ -35,8 +35,6 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
-
-        FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -70,6 +68,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
             FlyUI?.SetActive(false);
+            countdownText.text = "";
         }
         else
         {
@@ -119,6 +118,12 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             SetMounted(false);
             Destroy(gameObject, 2f);
         }
+    }
+
+    public void SetUI(GameObject flyUI, TMP_Text countdown)
+    {
+        FlyUI = flyUI;
+        countdownText = countdown;
     }
 
 }

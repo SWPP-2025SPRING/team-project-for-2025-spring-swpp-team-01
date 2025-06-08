@@ -13,7 +13,7 @@ public class SmokeMovement : MonoBehaviour
         if (target == null) return;
 
         // 목표 위치 (높이 포함)
-        Vector3 targetPosition = target.position + new Vector3(0, heightOffset, 6);
+        Vector3 targetPosition = target.position -0.7f*target.forward;
 
         // 현재 위치 기준으로 목표와의 방향 벡터 계산 (Y축만 사용)
         Vector3 direction = targetPosition - transform.position;

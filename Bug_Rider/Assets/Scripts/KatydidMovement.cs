@@ -33,7 +33,6 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         katydidAnimator = GetComponent<Animator>();
-        shiftJumpUI?.SetActive(false);
 
     }
 
@@ -147,6 +146,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             shiftJumpUI?.SetActive(false);
+            countdownText.text = "";
 
             if (jumpRoutine != null)
             {
@@ -185,5 +185,11 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         isApproaching = false;
+    }
+
+    public void SetUI(GameObject JumpUI, TMP_Text countdown)
+    {
+        shiftJumpUI = JumpUI;
+        countdownText = countdown;
     }
 }
