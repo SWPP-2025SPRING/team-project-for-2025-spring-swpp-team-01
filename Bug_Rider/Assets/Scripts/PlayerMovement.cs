@@ -88,7 +88,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void Mount(Transform bug)
+    public void Mount(Transform bug)
     {
         isMounted = true;
         mountedBug = bug;
@@ -116,6 +116,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void Unmount()
     {
+        Debug.Log("Unmount" + isMounted + mountedBug);
         if (!isMounted || mountedBug == null) return;
 
         isMounted = false;
@@ -140,7 +141,7 @@ public class PlayerMovement : MonoBehaviour
         Debug.Log("장애물과 충돌하여 추락");
     }
 
-    public void ForceFallFromBug()
+    public virtual void ForceFallFromBug()
     {
         if (isMounted)
         {
