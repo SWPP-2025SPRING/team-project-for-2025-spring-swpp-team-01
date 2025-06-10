@@ -99,7 +99,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void Mount(Transform bug)
+    public void Mount(Transform bug)
     {
         isMounted = true;
         mountedBug = bug;
@@ -127,6 +127,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void Unmount()
     {
+        Debug.Log("Unmount" + isMounted + mountedBug);
         if (!isMounted || mountedBug == null) return;
 
         isMounted = false;

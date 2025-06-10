@@ -36,6 +36,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
         antAnimator = GetComponent<Animator>();
         walkStrategy = new WalkMovementStrategy();
+        DashUI?.SetActive(false);
     }
 
     void Update()
