@@ -16,9 +16,12 @@ public class FlyMovementStrategy : IBugMovementStrategy
     private float flightDuration = 5f;
     private bool isFlying = false;
     private bool canFly = true;
+    public float ascendSpeed = 0.2f;
+    public float descendSpeed = 0.2f;
+    private float maxHeight = 100f;
+    private float minHeight = 0f;
     private bool shouldAutoFall = false;
     private bool isAutoDescending = false;
-
 
     // 외부에서 사용할 수 있는 프로퍼티
     public bool CanFly => canFly;
@@ -40,6 +43,8 @@ public class FlyMovementStrategy : IBugMovementStrategy
         {
             isFlying = true;
             canFly = false;
+            maxHeight = rb.position.y + 20f;
+            minHeight = rb.position.y - 20f;
             flightCoroutine = owner.StartCoroutine(FlightRoutine());
         }
     }
@@ -136,9 +141,9 @@ public class FlyMovementStrategy : IBugMovementStrategy
         }
     }
 
-
     private IEnumerator FlightRoutine()
     {
+        float descendSpeedFall = 0.8f;
         float groundY = rb.position.y;
         rb.useGravity = false;
 
@@ -232,5 +237,4 @@ public class FlyMovementStrategy : IBugMovementStrategy
         }
         return 0f;
     }
-
 }

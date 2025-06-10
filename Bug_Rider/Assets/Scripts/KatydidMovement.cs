@@ -33,7 +33,6 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         katydidAnimator = GetComponent<Animator>();
-        shiftJumpUI?.SetActive(false);
 
     }
 
@@ -129,6 +128,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
+            Destroy(gameObject, 2f);
         }
         else if (col.contacts.Length > 0 && col.contacts[0].normal.y > 0.5f)
         {
@@ -146,6 +146,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             shiftJumpUI?.SetActive(false);
+            countdownText.text = "";
 
             if (jumpRoutine != null)
             {
@@ -156,6 +157,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         else
         {
             shiftJumpUI?.SetActive(true);
+            Destroy(GetComponent<MoveToTarget>());
         }
 
         isGrounded = true; // 탑승할 때 초기화
@@ -183,5 +185,11 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         isApproaching = false;
+    }
+
+    public void SetUI(GameObject JumpUI, TMP_Text countdown)
+    {
+        shiftJumpUI = JumpUI;
+        countdownText = countdown;
     }
 }

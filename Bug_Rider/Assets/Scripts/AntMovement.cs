@@ -36,7 +36,6 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
         antAnimator = GetComponent<Animator>();
         walkStrategy = new WalkMovementStrategy();
-
         DashUI?.SetActive(false);
     }
 
@@ -104,6 +103,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
         else
         {
             DashUI?.SetActive(true);
+            Destroy(GetComponent<MoveToTarget>());
         }
     }
 
@@ -140,5 +140,13 @@ public class AntMovement : MonoBehaviour, IRideableBug
         antAnimator?.SetTrigger("is_dropping");
         player?.ForceFallFromBug();
         SetMounted(false);
+        Destroy(gameObject,2f);
     }
+
+    public void SetUI(GameObject dashUI, TMP_Text countdown)
+    {
+        DashUI = dashUI;
+        countdownText = countdown;
+    }
+
 }

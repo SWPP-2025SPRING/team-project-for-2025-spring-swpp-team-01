@@ -32,7 +32,6 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
-
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
 
@@ -74,6 +73,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         else
         {
             FlyUI?.SetActive(true);
+            Destroy(GetComponent<MoveToTarget>());
         }
     }
 
@@ -116,7 +116,13 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
+            Destroy(gameObject, 2f);
         }
     }
 
+    public void SetUI(GameObject flyUI, TMP_Text countdown)
+    {
+        FlyUI = flyUI;
+        countdownText = countdown;
+    }
 }
