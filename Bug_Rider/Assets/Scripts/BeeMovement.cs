@@ -25,6 +25,10 @@ public class BeeMovement : MonoBehaviour, IRideableBug
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;  // 추가
 
+    public AudioSource audioSource;
+    public AudioClip flyAudioClip;
+    public AudioClip dropAudioClip;
+
 
     void Awake()
     {
@@ -47,6 +51,7 @@ public class BeeMovement : MonoBehaviour, IRideableBug
 
         if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
+            PlaySound(flyAudioClip, true);
             flyStrategy.StartFlight();
         }
     }
@@ -68,6 +73,7 @@ public class BeeMovement : MonoBehaviour, IRideableBug
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
+            PlaySound(dropAudioClip);
             FlyUI?.SetActive(false);
         }
         else
@@ -117,5 +123,14 @@ public class BeeMovement : MonoBehaviour, IRideableBug
         //     player?.ForceFallFromBug();
         //     SetMounted(false);
         // }
+    }
+
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 }

@@ -2,7 +2,7 @@ using UnityEngine;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
-public class ButterflyMovement : MonoBehaviour, IRideableBug
+public class BeetleMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 5f;
     public float rotationSpeed = 200f;
@@ -24,12 +24,9 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;  // 추가
-
     public AudioSource audioSource;
-    public AudioClip flyAudioClip;
-    public AudioClip stunAudioClip;
+    public AudioClip basicAudioClip;
     public AudioClip dropAudioClip;
-
 
     void Awake()
     {
@@ -52,7 +49,6 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
 
         if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
-            PlaySound(flyAudioClip, true);
             flyStrategy.StartFlight();
         }
     }
@@ -75,12 +71,16 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
             FlyUI?.SetActive(false);
+
             PlaySound(dropAudioClip, false);
         }
         else
         {
             FlyUI?.SetActive(true);
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
+
+            // 여기서 기본 사운드 재생
+            PlaySound(basicAudioClip, true);
         }
     }
 
@@ -111,19 +111,19 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
 
     void OnCollisionEnter(Collision col)
     {
-        if (!isMounted) return;
+        // if (!isMounted) return;
 
-        if (col.gameObject.CompareTag("Obstacle"))
-        {
-            animator?.SetTrigger("is_drop");
+        // if (col.gameObject.CompareTag("Obstacle"))
+        // {
+        //     animator?.SetTrigger("is_drop");
 
-            flyStrategy.StopFlight();
-            FlyUI?.SetActive(false); 
-            PlaySound(stunAudioClip, false);
-            var player = GetComponentInChildren<PlayerMovement>();
-            player?.ForceFallFromBug();
-            SetMounted(false);
-        }
+        //     flyStrategy.StopFlight();
+        //     FlyUI?.SetActive(false); 
+
+        //     var player = GetComponentInChildren<PlayerMovement>();
+        //     player?.ForceFallFromBug();
+        //     SetMounted(false);
+        // }
     }
 
     private void PlaySound(AudioClip clip, bool loop = false)

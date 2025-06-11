@@ -26,6 +26,13 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
     private Coroutine jumpRoutine;
     private Coroutine approachRoutine;
 
+
+    public AudioSource audioSource;
+    public AudioClip walkAudioClip;
+    public AudioClip jumpAudioClip;
+    public AudioClip stunAudioClip;
+    public AudioClip dropAudioClip;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -82,6 +89,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             if (isGrounded)
             {
                 katydidAnimator.SetTrigger("is_jumping");
+                PlaySound(jumpAudioClip, false);
 
                 if (Input.GetKey(KeyCode.LeftShift) && canJump)
                 {
@@ -124,7 +132,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         {
             katydidAnimator?.SetTrigger("is_dropping");
             Debug.Log("is_dropping triggered");
-
+            PlaySound(stunAudioClip, false);
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
@@ -147,6 +155,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             shiftJumpUI?.SetActive(false);
             countdownText.text = "";
+            PlaySound(dropAudioClip, false);
 
             if (jumpRoutine != null)
             {
@@ -191,5 +200,14 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
     {
         shiftJumpUI = JumpUI;
         countdownText = countdown;
+    }
+
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 }

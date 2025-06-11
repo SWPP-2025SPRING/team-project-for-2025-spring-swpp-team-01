@@ -27,6 +27,12 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
     private IBugMovementStrategy walkStrategy;
 
+    public AudioSource audioSource;
+    public AudioClip walkAudioClip;
+    public AudioClip dashAudioClip;
+    public AudioClip stunAudioClip;
+    public AudioClip dropAudioClip;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -36,7 +42,13 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
         antAnimator = GetComponent<Animator>();
         walkStrategy = new WalkMovementStrategy();
-        DashUI?.SetActive(false);
+
+        // Set AudioSource
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
     }
 
     void Update()
@@ -46,6 +58,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             StartCoroutine(Dash());
+            PlaySound(dashAudioClip); // Play audio loop
         }
     }
 
@@ -54,6 +67,11 @@ public class AntMovement : MonoBehaviour, IRideableBug
         if (!isMounted || isApproaching || isDashing) return;
 
         walkStrategy.HandleMovement(rb, antAnimator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
+
+        if (!audioSource.isPlaying || audioSource.clip != walkAudioClip)
+        {
+            PlaySound(walkAudioClip, true);  // loop 걷는 소리
+        }
     }
 
     public IEnumerator Dash()
@@ -99,6 +117,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             DashUI?.SetActive(false);
             countdownText.text = "";
+            PlaySound(dropAudioClip, false);
         }
         else
         {
@@ -139,8 +158,9 @@ public class AntMovement : MonoBehaviour, IRideableBug
         var player = GetComponentInChildren<PlayerMovement>();
         antAnimator?.SetTrigger("is_dropping");
         player?.ForceFallFromBug();
+        PlaySound(stunAudioClip);  // Play audio once
         SetMounted(false);
-        Destroy(gameObject,2f);
+        Destroy(gameObject, 2f);
     }
 
     public void SetUI(GameObject dashUI, TMP_Text countdown)
@@ -149,4 +169,12 @@ public class AntMovement : MonoBehaviour, IRideableBug
         countdownText = countdown;
     }
 
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
+    }
 }

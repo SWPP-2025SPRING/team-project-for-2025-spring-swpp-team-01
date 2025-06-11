@@ -18,6 +18,11 @@ public class MothMovement : MonoBehaviour, IRideableBug
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;
 
+    public AudioSource audioSource;
+    public AudioClip flyAudioClip;
+    public AudioClip stunAudioClip;
+    public AudioClip dropAudioClip;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -42,6 +47,7 @@ public class MothMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_flying", false);
             FlyUI?.SetActive(false);
+            PlaySound(dropAudioClip);
         }
         else
         {
@@ -50,8 +56,8 @@ public class MothMovement : MonoBehaviour, IRideableBug
 
             // 비행 애니메이션 시작
             animator?.SetBool("is_flying", true);
-
             flyStrategy.StartFlight();
+            PlaySound(flyAudioClip);
             StartCoroutine(AutoFlyBackwardRoutine());
         }
     }
@@ -98,6 +104,16 @@ public class MothMovement : MonoBehaviour, IRideableBug
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
+            PlaySound(stunAudioClip);
         }
+    }
+
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 }

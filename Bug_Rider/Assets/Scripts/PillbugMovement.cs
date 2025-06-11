@@ -19,6 +19,11 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
     private Animator animator;
     private Coroutine approachRoutine;
 
+    public AudioSource audioSource;
+    public AudioClip rollAudioClip;
+    public AudioClip stunAudioClip;
+    public AudioClip dropAudioClip;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -66,11 +71,13 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             currentSpeed = baseSpeed;
             animator.SetBool("is_rolling", false);
+            PlaySound(dropAudioClip, false);
         }
         else
         {
             currentSpeed = baseSpeed;
             animator.SetBool("is_rolling", true);
+            PlaySound(rollAudioClip, true);
         }
     }
 
@@ -106,8 +113,17 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
         var player = GetComponentInChildren<PlayerMovement>();
         animator?.SetTrigger("is_dropping");
         Debug.Log("is_dropping triggered");
-
+        PlaySound(stunAudioClip);
         player?.ForceFallFromBug();
         SetMounted(false);
+    }
+
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 }

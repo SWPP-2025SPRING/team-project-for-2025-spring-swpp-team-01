@@ -29,6 +29,15 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private PlayerMovement mountedPlayer;
 
+
+    public AudioSource audioSource;
+    public AudioClip walkAudioClip;
+    public AudioClip butterflyAudioClip;
+    public AudioClip beeAudioClip;
+    public AudioClip mothAudioClip;
+    public AudioClip stunAudioClip;
+    public AudioClip dropAudioClip;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -65,6 +74,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetBool("is_walking", false);
+            PlaySound(dropAudioClip, false);
 
             if (transformationRoutine != null)
                 StopCoroutine(transformationRoutine);
@@ -73,6 +83,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
             transformationRoutine = StartCoroutine(DelayedTransformation());
+            PlaySound(walkAudioClip, true);
         }
     }
 
@@ -99,7 +110,34 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
 
         mountedPlayer?.Mount(newBug.transform);
 
+        // 변신 사운드 재생
+        PlayTransformSound(chosen);
+
         Destroy(gameObject); // 애벌레 제거
+    }
+
+    private void PlayTransformSound(GameObject bugPrefab)
+    {
+        Debug.Log("PlayTransformSound");
+        if (audioSource == null) return;
+
+        // 먼저 기존 배경 소리 멈춤
+        audioSource.Stop();
+        audioSource.loop = false;
+
+        if (bugPrefab == mothPrefab && mothAudioClip != null)
+        {
+            PlaySound(mothAudioClip);
+        }
+        else if (bugPrefab == butterflyPrefab && butterflyAudioClip != null)
+        {
+            PlaySound(butterflyAudioClip);
+        }
+        else if (bugPrefab == beePrefab && beeAudioClip != null)
+        {
+            PlaySound(beeAudioClip);
+        }
+        Debug.Log("PlayedTransformSound");
     }
 
 
@@ -136,10 +174,20 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetTrigger("is_drop");
+            PlaySound(stunAudioClip, true);
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
         }
+    }
+
+    private void PlaySound(AudioClip clip, bool loop = false)
+    {
+        if (clip == null || audioSource == null) return;
+
+        audioSource.loop = loop;
+        audioSource.clip = clip;
+        audioSource.Play();
     }
 }
