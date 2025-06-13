@@ -28,10 +28,12 @@ public class AntMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
 
     public AudioSource audioSource;
-    public AudioClip walkAudioClip;
-    public AudioClip dashAudioClip;
-    public AudioClip stunAudioClip;
-    public AudioClip dropAudioClip;
+
+    public AudioConfig walkAudio;
+    public AudioConfig dashAudio;
+    public AudioConfig stunAudio;
+    public AudioConfig dropAudio;
+
 
     void Awake()
     {
@@ -58,7 +60,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             StartCoroutine(Dash());
-            PlaySound(dashAudioClip); // Play audio loop
+            PlaySound(dashAudio); // Play audio loop
         }
     }
 
@@ -68,9 +70,9 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
         walkStrategy.HandleMovement(rb, antAnimator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
 
-        if (!audioSource.isPlaying || audioSource.clip != walkAudioClip)
+        if (!audioSource.isPlaying || audioSource.clip != walkAudio.clip)
         {
-            PlaySound(walkAudioClip, true);  // loop 걷는 소리
+            PlaySound(walkAudio, true);  // loop 걷는 소리
         }
     }
 
@@ -117,7 +119,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             DashUI?.SetActive(false);
             countdownText.text = "";
-            PlaySound(dropAudioClip, false);
+            PlaySound(dropAudio, false);
         }
         else
         {
@@ -158,7 +160,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
         var player = GetComponentInChildren<PlayerMovement>();
         antAnimator?.SetTrigger("is_dropping");
         player?.ForceFallFromBug();
-        PlaySound(stunAudioClip);  // Play audio once
+        PlaySound(stunAudio);  // Play audio once
         SetMounted(false);
         Destroy(gameObject, 2f);
     }
@@ -169,12 +171,44 @@ public class AntMovement : MonoBehaviour, IRideableBug
         countdownText = countdown;
     }
 
-    private void PlaySound(AudioClip clip, bool loop = false)
+    private void PlaySound(AudioConfig config, bool loop = false)
     {
-        if (clip == null || audioSource == null) return;
+        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = loop;
-        audioSource.clip = clip;
+        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
+        audioSource.clip = config.clip;
+        audioSource.volume = config.volume;
+        audioSource.pitch = config.pitch;
+        audioSource.time = config.startTime;
         audioSource.Play();
+
+        float duration = (config.endTime > 0)
+            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
+            : config.clip.length - config.startTime;
+
+        if (loop)
+        {
+            StartCoroutine(CustomLoop(config, duration));
+        }
+        else
+        {
+            StartCoroutine(StopAfter(duration));
+        }
+    }
+
+    private IEnumerator CustomLoop(AudioConfig config, float duration)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duration);
+            audioSource.time = config.startTime;
+            audioSource.Play();
+        }
+    }
+
+    private IEnumerator StopAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        audioSource.Stop();
     }
 }

@@ -29,14 +29,13 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private PlayerMovement mountedPlayer;
 
-
     public AudioSource audioSource;
-    public AudioClip walkAudioClip;
-    public AudioClip butterflyAudioClip;
-    public AudioClip beeAudioClip;
-    public AudioClip mothAudioClip;
-    public AudioClip stunAudioClip;
-    public AudioClip dropAudioClip;
+    public AudioConfig walkAudio;
+    public AudioConfig butterflyAudio;
+    public AudioConfig beeAudio;
+    public AudioConfig mothAudio;
+    public AudioConfig stunAudio;
+    public AudioConfig dropAudio;
 
     void Awake()
     {
@@ -74,7 +73,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetBool("is_walking", false);
-            PlaySound(dropAudioClip, false);
+            PlaySound(dropAudio, false);
 
             if (transformationRoutine != null)
                 StopCoroutine(transformationRoutine);
@@ -83,7 +82,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
             transformationRoutine = StartCoroutine(DelayedTransformation());
-            PlaySound(walkAudioClip, true);
+            PlaySound(walkAudio, true);
         }
     }
 
@@ -125,17 +124,17 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         audioSource.Stop();
         audioSource.loop = false;
 
-        if (bugPrefab == mothPrefab && mothAudioClip != null)
+        if (bugPrefab == mothPrefab && mothAudio != null)
         {
-            PlaySound(mothAudioClip);
+            PlaySound(mothAudio);
         }
-        else if (bugPrefab == butterflyPrefab && butterflyAudioClip != null)
+        else if (bugPrefab == butterflyPrefab && butterflyAudio != null)
         {
-            PlaySound(butterflyAudioClip);
+            PlaySound(butterflyAudio);
         }
-        else if (bugPrefab == beePrefab && beeAudioClip != null)
+        else if (bugPrefab == beePrefab && beeAudio != null)
         {
-            PlaySound(beeAudioClip);
+            PlaySound(beeAudio);
         }
         Debug.Log("PlayedTransformSound");
     }
@@ -174,7 +173,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetTrigger("is_drop");
-            PlaySound(stunAudioClip, true);
+            PlaySound(stunAudio, true);
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
@@ -182,12 +181,45 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         }
     }
 
-    private void PlaySound(AudioClip clip, bool loop = false)
+    private void PlaySound(AudioConfig config, bool loop = false)
     {
-        if (clip == null || audioSource == null) return;
+        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = loop;
-        audioSource.clip = clip;
+        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
+        audioSource.clip = config.clip;
+        audioSource.volume = config.volume;
+        audioSource.pitch = config.pitch;
+        audioSource.time = config.startTime;
         audioSource.Play();
+
+        float duration = (config.endTime > 0)
+            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
+            : config.clip.length - config.startTime;
+
+        if (loop)
+        {
+            StartCoroutine(CustomLoop(config, duration));
+        }
+        else
+        {
+            StartCoroutine(StopAfter(duration));
+        }
     }
+
+    private IEnumerator CustomLoop(AudioConfig config, float duration)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duration);
+            audioSource.time = config.startTime;
+            audioSource.Play();
+        }
+    }
+
+    private IEnumerator StopAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        audioSource.Stop();
+    }
+
 }

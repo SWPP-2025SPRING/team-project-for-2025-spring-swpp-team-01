@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -26,9 +27,9 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
     private PlayerMovement mountedPlayer;  // 추가
 
     public AudioSource audioSource;
-    public AudioClip flyAudioClip;
-    public AudioClip stunAudioClip;
-    public AudioClip dropAudioClip;
+    public AudioConfig flyAudio;
+    public AudioConfig stunAudio;
+    public AudioConfig dropAudio;
 
 
     void Awake()
@@ -43,7 +44,7 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator, true);
 
-        FlyUI?.SetActive(false);
+        // FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -52,7 +53,7 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
 
         if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
-            PlaySound(flyAudioClip, true);
+            PlaySound(flyAudio, true);
             flyStrategy.StartFlight();
         }
     }
@@ -118,20 +119,54 @@ public class ButterflyMovement : MonoBehaviour, IRideableBug
             animator?.SetTrigger("is_drop");
 
             flyStrategy.StopFlight();
-            FlyUI?.SetActive(false); 
-            PlaySound(stunAudioClip, false);
+            // FlyUI?.SetActive(false); 
+            PlaySound(stunAudio, false);
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
         }
     }
 
-    private void PlaySound(AudioClip clip, bool loop = false)
+    private void PlaySound(AudioConfig config, bool loop = false)
     {
-        if (clip == null || audioSource == null) return;
+        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = loop;
-        audioSource.clip = clip;
+        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
+        audioSource.clip = config.clip;
+        audioSource.volume = config.volume;
+        audioSource.pitch = config.pitch;
+        audioSource.time = config.startTime;
         audioSource.Play();
+
+        float duration = (config.endTime > 0)
+            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
+            : config.clip.length - config.startTime;
+
+        if (loop)
+        {
+            StartCoroutine(CustomLoop(config, duration));
+        }
+        else
+        {
+            StartCoroutine(StopAfter(duration));
+        }
+    }
+
+    private IEnumerator CustomLoop(AudioConfig config, float duration)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duration);
+            audioSource.time = config.startTime;
+            audioSource.Play();
+        }
+    }
+
+
+    private IEnumerator StopAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        Debug.Log("Stop after duration" + duration);
+        audioSource.Stop();
     }
 }

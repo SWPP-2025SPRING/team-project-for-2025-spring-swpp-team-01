@@ -126,7 +126,7 @@ public class FlyMovementStrategy : IBugMovementStrategy
                 Quaternion deltaRotation = Quaternion.Euler(0f, h * rotationSpeed * Time.fixedDeltaTime, 0f);
                 rb.MoveRotation(rb.rotation * deltaRotation);
             }
-            animator?.SetFloat("fly_speed", moveDir.magnitude);
+            // animator?.SetFloat("fly_speed", moveDir.magnitude);
         }
 
 
@@ -150,7 +150,7 @@ public class FlyMovementStrategy : IBugMovementStrategy
         isFlying = true;
         canFly = false;
 
-        flyUI?.SetActive(false);
+        // flyUI?.SetActive(false);
         // 1. ascend 상태가 Animator에 존재하면 먼저 실행
         bool hasAscendState = animator.HasState(0, Animator.StringToHash("Base Layer.ascend"));
         if (hasAscendState)

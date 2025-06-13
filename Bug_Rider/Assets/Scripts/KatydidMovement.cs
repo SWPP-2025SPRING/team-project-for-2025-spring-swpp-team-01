@@ -26,12 +26,11 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
     private Coroutine jumpRoutine;
     private Coroutine approachRoutine;
 
-
     public AudioSource audioSource;
-    public AudioClip walkAudioClip;
-    public AudioClip jumpAudioClip;
-    public AudioClip stunAudioClip;
-    public AudioClip dropAudioClip;
+    public AudioConfig walkAudio;
+    public AudioConfig jumpAudio;
+    public AudioConfig stunAudio;
+    public AudioConfig dropAudio;
 
     void Awake()
     {
@@ -89,7 +88,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
             if (isGrounded)
             {
                 katydidAnimator.SetTrigger("is_jumping");
-                PlaySound(jumpAudioClip, false);
+                PlaySound(jumpAudio, false);
 
                 if (Input.GetKey(KeyCode.LeftShift) && canJump)
                 {
@@ -121,7 +120,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
 
         countdownText.text = "";
         canJump = true;
-        shiftJumpUI?.SetActive(true);
+        // shiftJumpUI?.SetActive(true);
     }
 
     void OnCollisionEnter(Collision col)
@@ -132,7 +131,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         {
             katydidAnimator?.SetTrigger("is_dropping");
             Debug.Log("is_dropping triggered");
-            PlaySound(stunAudioClip, false);
+            PlaySound(stunAudio, false);
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
@@ -202,12 +201,45 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         countdownText = countdown;
     }
 
-    private void PlaySound(AudioClip clip, bool loop = false)
+    private void PlaySound(AudioConfig config, bool loop = false)
     {
-        if (clip == null || audioSource == null) return;
+        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = loop;
-        audioSource.clip = clip;
+        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
+        audioSource.clip = config.clip;
+        audioSource.volume = config.volume;
+        audioSource.pitch = config.pitch;
+        audioSource.time = config.startTime;
         audioSource.Play();
+
+        float duration = (config.endTime > 0)
+            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
+            : config.clip.length - config.startTime;
+
+        if (loop)
+        {
+            StartCoroutine(CustomLoop(config, duration));
+        }
+        else
+        {
+            StartCoroutine(StopAfter(duration));
+        }
     }
+
+    private IEnumerator CustomLoop(AudioConfig config, float duration)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duration);
+            audioSource.time = config.startTime;
+            audioSource.Play();
+        }
+    }
+
+    private IEnumerator StopAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        audioSource.Stop();
+    }
+
 }

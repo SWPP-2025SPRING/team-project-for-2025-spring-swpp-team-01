@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -25,8 +26,8 @@ public class BeetleMovement : MonoBehaviour, IRideableBug
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;  // 추가
     public AudioSource audioSource;
-    public AudioClip basicAudioClip;
-    public AudioClip dropAudioClip;
+    public AudioConfig basicAudio;
+    public AudioConfig dropAudio;
 
     void Awake()
     {
@@ -72,7 +73,7 @@ public class BeetleMovement : MonoBehaviour, IRideableBug
             animator?.SetBool("is_walking", false);
             FlyUI?.SetActive(false);
 
-            PlaySound(dropAudioClip, false);
+            PlaySound(dropAudio, false);
         }
         else
         {
@@ -80,7 +81,7 @@ public class BeetleMovement : MonoBehaviour, IRideableBug
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
 
             // 여기서 기본 사운드 재생
-            PlaySound(basicAudioClip, true);
+            PlaySound(basicAudio, true);
         }
     }
 
@@ -126,12 +127,44 @@ public class BeetleMovement : MonoBehaviour, IRideableBug
         // }
     }
 
-    private void PlaySound(AudioClip clip, bool loop = false)
+    private void PlaySound(AudioConfig config, bool loop = false)
     {
-        if (clip == null || audioSource == null) return;
+        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = loop;
-        audioSource.clip = clip;
+        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
+        audioSource.clip = config.clip;
+        audioSource.volume = config.volume;
+        audioSource.pitch = config.pitch;
+        audioSource.time = config.startTime;
         audioSource.Play();
+
+        float duration = (config.endTime > 0)
+            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
+            : config.clip.length - config.startTime;
+
+        if (loop)
+        {
+            StartCoroutine(CustomLoop(config, duration));
+        }
+        else
+        {
+            StartCoroutine(StopAfter(duration));
+        }
+    }
+
+    private IEnumerator CustomLoop(AudioConfig config, float duration)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duration);
+            audioSource.time = config.startTime;
+            audioSource.Play();
+        }
+    }
+
+    private IEnumerator StopAfter(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        audioSource.Stop();
     }
 }
