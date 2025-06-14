@@ -3,7 +3,7 @@ using System.Collections;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
-public class BeeMovement : MonoBehaviour, IRideableBug
+public class BeetleMovement : MonoBehaviour, IRideableBug
 {
     public float moveSpeed = 5f;
     public float rotationSpeed = 200f;
@@ -25,11 +25,9 @@ public class BeeMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;  // 추가
-
     public AudioSource audioSource;
-    public AudioConfig flyAudio;
+    public AudioConfig basicAudio;
     public AudioConfig dropAudio;
-
 
     void Awake()
     {
@@ -43,7 +41,7 @@ public class BeeMovement : MonoBehaviour, IRideableBug
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator, true);
 
-        // FlyUI?.SetActive(false);
+        FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -52,7 +50,6 @@ public class BeeMovement : MonoBehaviour, IRideableBug
 
         if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
-            PlaySound(flyAudio, true);
             flyStrategy.StartFlight();
         }
     }
@@ -74,13 +71,17 @@ public class BeeMovement : MonoBehaviour, IRideableBug
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
-            PlaySound(dropAudio);
-            // FlyUI?.SetActive(false);
+            FlyUI?.SetActive(false);
+
+            PlaySound(dropAudio, false);
         }
         else
         {
-            // FlyUI?.SetActive(true);
+            FlyUI?.SetActive(true);
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
+
+            // 여기서 기본 사운드 재생
+            PlaySound(basicAudio, true);
         }
     }
 
