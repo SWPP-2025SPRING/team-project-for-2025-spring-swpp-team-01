@@ -1,35 +1,73 @@
 using UnityEngine;
-
 public class MoveToTarget : MonoBehaviour
 {
-    private Vector3 target;
+    private Vector3 targetPosition;
     private float speed;
+    private float elapsedTime;
     private Animator animator;
-
-    public void Initialize(Vector3 targetPosition, float moveSpeed)
+    [Header("Oscillation Settings")]
+    [Tooltip("Max possible yaw amplitude in degrees")]
+    public float maxYawAngle = 45f;
+    [Tooltip("Max possible oscillation frequency (Hz)")]
+    public float maxOscillationFrequency = 1f;
+    [Header("Randomization & Smoothing")]
+    [Tooltip("How often (seconds) to pick new random yaw/frequency")]
+    public float changeInterval = 1f;
+    [Tooltip("How fast to smooth toward the new values (per second)")]
+    public float smoothingSpeed = 1f;
+    // current & target params
+    private float currentYawAmp;
+    private float targetYawAmp;
+    private float currentFreq;
+    private float targetFreq;
+    private float changeTimer;
+    /// <summary>
+    /// Call immediately after Instantiate().
+    /// </summary>
+    public void Initialize(Vector3 targetPos, float moveSpeed)
     {
-        target = targetPosition;
+        targetPosition = targetPos;
         speed = moveSpeed;
-
+        elapsedTime = 0f;
         animator = GetComponent<Animator>();
         if (animator != null)
-        {
-            animator.SetBool("is_walking", true);  // ÀÌµ¿ ½ÃÀÛ ½Ã °È±â ¾Ö´Ï¸ŞÀÌ¼Ç
-        }
-    }
+            animator.SetBool("is_walking", true);
+        // Initialize both current and target to a random start
+        targetYawAmp = Random.Range(0f, maxYawAngle);
+        currentYawAmp = targetYawAmp;
+        targetFreq = Random.Range(0f, maxOscillationFrequency);
+        currentFreq = targetFreq;
+        changeTimer = changeInterval;
+        // ë§Œì•½ íƒ‘ìŠ¹ì¤‘ì¸ ë²Œë ˆê°€ ì•„ë‹ˆë©´ ì¼ì • ì‹œê°„ í›„ì— íŒŒê´´
 
+
+        //Destroy(gameObject, 10f);
+        
+    }
     void Update()
     {
-        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
-
-        if (Vector3.Distance(transform.position, target) < 0.05f)
+        float dt = Time.deltaTime;
+        elapsedTime += dt;
+        // 1) Handle random target update
+        changeTimer -= dt;
+        if (changeTimer <= 0f)
         {
-            if (animator != null)
-            {
-                animator.SetBool("is_walking", false);  // Á¤Áö
-            }
-
-            Destroy(gameObject);  // µµÂø ÈÄ Á¦°Å
+            targetYawAmp = Random.Range(0f, maxYawAngle);
+            targetFreq = Random.Range(0f, maxOscillationFrequency);
+            changeTimer = changeInterval;
         }
+        // 2) Smoothly interpolate current toward target
+        currentYawAmp = Mathf.Lerp(currentYawAmp, targetYawAmp, smoothingSpeed * dt);
+        currentFreq = Mathf.Lerp(currentFreq, targetFreq, smoothingSpeed * dt);
+        // 3) Compute oscillating yaw
+        float yawOffset = Mathf.Sin(elapsedTime * currentFreq * 2f * Mathf.PI)
+                        * currentYawAmp;
+        // 4) Compute base rotation toward target
+        Vector3 toTarget = (targetPosition - transform.position).normalized;
+        Quaternion baseRot = Quaternion.LookRotation(toTarget);
+        // 5) Apply yaw oscillation and set rotation
+        transform.rotation = baseRot * Quaternion.Euler(0f, yawOffset, 0f);
+        // 6) Move forward along local forward
+        transform.position += transform.forward * speed * dt;
     }
 }

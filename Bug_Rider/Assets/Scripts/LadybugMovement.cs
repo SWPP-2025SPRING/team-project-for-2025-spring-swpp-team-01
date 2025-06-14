@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
 public class LadybugMovement : MonoBehaviour, IRideableBug
@@ -25,13 +24,6 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
 
-
-    public AudioSource audioSource;
-    public AudioConfig walkAudio;
-    public AudioConfig flyAudio;
-    public AudioConfig stunAudio;
-    public AudioConfig dropAudio;
-
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -40,10 +32,9 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
+
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
-
-        // FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -73,10 +64,12 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
         if (!mounted)
         {
+            flyStrategy.StopFlight();
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
             FlyUI?.SetActive(false);
+            countdownText.text = "";
         }
         else
         {
@@ -119,7 +112,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             animator?.SetTrigger("is_drop");
 
             flyStrategy.StopFlight();
-            FlyUI?.SetActive(false);
+            FlyUI?.SetActive(false); 
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
@@ -133,45 +126,5 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         FlyUI = flyUI;
         countdownText = countdown;
     }
-    
-    private void PlaySound(AudioConfig config, bool loop = false)
-    {
-        if (config == null || config.clip == null || audioSource == null) return;
 
-        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
-
-        float duration = (config.endTime > 0)
-            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
-            : config.clip.length - config.startTime;
-
-        if (loop)
-        {
-            StartCoroutine(CustomLoop(config, duration));
-        }
-        else
-        {
-            StartCoroutine(StopAfter(duration));
-        }
-    }
-
-    private IEnumerator CustomLoop(AudioConfig config, float duration)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.time = config.startTime;
-            audioSource.Play();
-        }
-    }
-
-    private IEnumerator StopAfter(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        audioSource.Stop();
-    }
 }

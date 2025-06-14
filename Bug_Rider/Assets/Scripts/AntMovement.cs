@@ -5,12 +5,14 @@ using TMPro;
 [RequireComponent(typeof(Rigidbody))]
 public class AntMovement : MonoBehaviour, IRideableBug
 {
-    public float moveSpeed = 3f;
-    public float rotationSpeed = 180f;
-    public float dashSpeed = 15f;
-    public float dashDuration = 0.4f;
+    public float acceleration = 5f;      // 가속도
+    public float maxSpeed = 5f;           // 최대 속도
+    public float rotationSpeed = 45f;    // 회전 속도
+    public float dashSpeed = 10f;
+    public float dashDuration = 1f;
     public float dashCooldown = 1f;
     public float obstacleCheckDist = 0.8f;
+    public float moveSpeed = 10f;
 
     public LayerMask obstacleMask;
     public GameObject DashUI;
@@ -24,16 +26,7 @@ public class AntMovement : MonoBehaviour, IRideableBug
     private Rigidbody rb;
     private Animator antAnimator;
     private Coroutine approachRoutine;
-
-    private IBugMovementStrategy walkStrategy;
-
-    public AudioSource audioSource;
-
-    public AudioConfig walkAudio;
-    public AudioConfig dashAudio;
-    public AudioConfig stunAudio;
-    public AudioConfig dropAudio;
-
+    private Vector3 currentVel = Vector3.zero;   // 가속도 적용 속도 벡터
 
     void Awake()
     {
@@ -43,38 +36,67 @@ public class AntMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         antAnimator = GetComponent<Animator>();
-        walkStrategy = new WalkMovementStrategy();
-
-        // Set AudioSource
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-        }
     }
 
     void Update()
     {
         if (!isMounted || isDashing || !canDash) return;
-
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             StartCoroutine(Dash());
-            PlaySound(dashAudio); // Play audio loop
         }
     }
 
     void FixedUpdate()
     {
-        if (!isMounted || isApproaching || isDashing) return;
+        if (!isMounted || isApproaching) return;
 
-        walkStrategy.HandleMovement(rb, antAnimator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
-
-        if (!audioSource.isPlaying || audioSource.clip != walkAudio.clip)
+        if (isDashing)
         {
-            PlaySound(walkAudio, true);  // loop 걷는 소리
+            rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
+            return;
         }
+
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
+
+        if (Mathf.Abs(h) > 0.01f)
+        {
+            float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
+            Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
+            rb.MoveRotation(rb.rotation * deltaRotation);
+        }
+
+        Vector3 forward = rb.rotation * Vector3.forward;
+        if (Mathf.Abs(v) > 0.01f)
+        {
+            Vector3 targetVel = forward * v * maxSpeed;
+            currentVel = Vector3.MoveTowards(currentVel, targetVel, acceleration * Time.fixedDeltaTime);
+
+            // Clamp speed
+            if (currentVel.magnitude > maxSpeed)
+                currentVel = currentVel.normalized * maxSpeed;
+
+            Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
+            if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
+            {
+                rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
+            }
+        }
+        else
+        {
+            currentVel = Vector3.MoveTowards(currentVel, Vector3.zero, acceleration * Time.fixedDeltaTime);
+
+            // Clamp speed
+            if (currentVel.magnitude > maxSpeed)
+                currentVel = currentVel.normalized * maxSpeed;
+
+            rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
+        }
+
+        antAnimator?.SetBool("is_walking", currentVel.magnitude > 0.1f);
     }
+
 
     public IEnumerator Dash()
     {
@@ -85,13 +107,14 @@ public class AntMovement : MonoBehaviour, IRideableBug
         antAnimator?.SetTrigger("is_dashing");
 
         Vector3 dashDir = rb.rotation * Vector3.forward;
-        float elapsed = 0f;
+        currentVel = dashDir * dashSpeed;
 
-        while (elapsed < dashDuration)
+        float dashElapsed = 0f;
+        while (dashElapsed < dashDuration)
         {
-            Vector3 next = rb.position + dashDir * dashSpeed * Time.fixedDeltaTime;
-            rb.MovePosition(next);
-            elapsed += Time.fixedDeltaTime;
+            // dash 동안 속도 유지
+            currentVel = dashDir * dashSpeed;
+            dashElapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
@@ -119,7 +142,6 @@ public class AntMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             DashUI?.SetActive(false);
             countdownText.text = "";
-            PlaySound(dropAudio, false);
         }
         else
         {
@@ -160,9 +182,8 @@ public class AntMovement : MonoBehaviour, IRideableBug
         var player = GetComponentInChildren<PlayerMovement>();
         antAnimator?.SetTrigger("is_dropping");
         player?.ForceFallFromBug();
-        PlaySound(stunAudio);  // Play audio once
         SetMounted(false);
-        Destroy(gameObject, 2f);
+        Destroy(gameObject,2f);
     }
 
     public void SetUI(GameObject dashUI, TMP_Text countdown)
@@ -171,44 +192,4 @@ public class AntMovement : MonoBehaviour, IRideableBug
         countdownText = countdown;
     }
 
-    private void PlaySound(AudioConfig config, bool loop = false)
-    {
-        if (config == null || config.clip == null || audioSource == null) return;
-
-        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
-
-        float duration = (config.endTime > 0)
-            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
-            : config.clip.length - config.startTime;
-
-        if (loop)
-        {
-            StartCoroutine(CustomLoop(config, duration));
-        }
-        else
-        {
-            StartCoroutine(StopAfter(duration));
-        }
-    }
-
-    private IEnumerator CustomLoop(AudioConfig config, float duration)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.time = config.startTime;
-            audioSource.Play();
-        }
-    }
-
-    private IEnumerator StopAfter(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        audioSource.Stop();
-    }
 }
