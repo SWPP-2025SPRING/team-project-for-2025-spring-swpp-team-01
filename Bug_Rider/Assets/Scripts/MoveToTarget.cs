@@ -1,35 +1,72 @@
 using UnityEngine;
-
+using System.Collections;
 public class MoveToTarget : MonoBehaviour
 {
-    private Vector3 target;
+    private Vector3 targetPosition;
     private float speed;
+    private float elapsedTime;
     private Animator animator;
-
-    public void Initialize(Vector3 targetPosition, float moveSpeed)
+    private bool isMounted = false;
+    private Coroutine selfDestructRoutine;
+    [Header("Oscillation Settings")]
+    public float maxYawAngle = 45f;
+    public float maxOscillationFrequency = 1f;
+    [Header("Randomization & Smoothing")]
+    public float changeInterval = 1f;
+    public float smoothingSpeed = 1f;
+    private float currentYawAmp;
+    private float targetYawAmp;
+    private float currentFreq;
+    private float targetFreq;
+    private float changeTimer;
+    public void Initialize(Vector3 targetPos, float moveSpeed)
     {
-        target = targetPosition;
+        targetPosition = targetPos;
         speed = moveSpeed;
-
+        elapsedTime = 0f;
         animator = GetComponent<Animator>();
         if (animator != null)
+            animator.SetBool("is_walking", true);
+        targetYawAmp = Random.Range(0f, maxYawAngle);
+        currentYawAmp = targetYawAmp;
+        targetFreq = Random.Range(0f, maxOscillationFrequency);
+        currentFreq = targetFreq;
+        changeTimer = changeInterval;
+        // :ë³„: ìë™ íŒŒê´´ ì˜ˆì•½
+        selfDestructRoutine = StartCoroutine(SelfDestructIfNotMounted(10f));
+    }
+    private IEnumerator SelfDestructIfNotMounted(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (!isMounted)
         {
-            animator.SetBool("is_walking", true);  // ÀÌµ¿ ½ÃÀÛ ½Ã °È±â ¾Ö´Ï¸ŞÀÌ¼Ç
+            Destroy(gameObject); // ë²Œë ˆ í†µì§¸ë¡œ ì‚­ì œ
         }
     }
-
+    // :ë³„: ì™¸ë¶€ì—ì„œ í˜¸ì¶œ: í”Œë ˆì´ì–´ê°€ íƒ‘ìŠ¹í•˜ë©´ ì˜ˆì•½ ì·¨ì†Œ
+    public void CancelSelfDestruct()
+    {
+        isMounted = true;
+        if (selfDestructRoutine != null)
+            StopCoroutine(selfDestructRoutine);
+    }
     void Update()
     {
-        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
-
-        if (Vector3.Distance(transform.position, target) < 0.05f)
+        float dt = Time.deltaTime;
+        elapsedTime += dt;
+        changeTimer -= dt;
+        if (changeTimer <= 0f)
         {
-            if (animator != null)
-            {
-                animator.SetBool("is_walking", false);  // Á¤Áö
-            }
-
-            Destroy(gameObject);  // µµÂø ÈÄ Á¦°Å
+            targetYawAmp = Random.Range(0f, maxYawAngle);
+            targetFreq = Random.Range(0f, maxOscillationFrequency);
+            changeTimer = changeInterval;
         }
+        currentYawAmp = Mathf.Lerp(currentYawAmp, targetYawAmp, smoothingSpeed * dt);
+        currentFreq = Mathf.Lerp(currentFreq, targetFreq, smoothingSpeed * dt);
+        float yawOffset = Mathf.Sin(elapsedTime * currentFreq * 2f * Mathf.PI) * currentYawAmp;
+        Vector3 toTarget = (targetPosition - transform.position).normalized;
+        Quaternion baseRot = Quaternion.LookRotation(toTarget);
+        transform.rotation = baseRot * Quaternion.Euler(0f, yawOffset, 0f);
+        transform.position += transform.forward * speed * dt;
     }
 }

@@ -1,123 +1,218 @@
 using UnityEngine;
-
+using System.Collections;
 public class RespawnManager : MonoBehaviour
 {
     public Transform[] respawnPoints;
     private int currentRespawnIndex = 0;
     private bool reachedLastPoint = false;
-
     private GameObject player;
-
+    private Animator animator;
+    public GameObject smoke;
+    /* ---------- ì´ë™ ì ê¸ˆìš© ë³€ìˆ˜ ---------- */
+    private float movementLockEndTime = 0f;    // ì ê¸ˆì´ í’€ë¦´ ì ˆëŒ€ ì‹œê°
+    private bool isMovementLocked = false; // í˜„ì¬ ì ê¸ˆ ìƒíƒœ
+    private PlayerMovement playerMovement;
     private void Awake()
     {
-        // ÀÚ½Ä ¿ÀºêÁ§Æ®µéÀ» ¸®½ºÆù Æ÷ÀÎÆ®·Î µî·Ï
+        // ìì‹ ì˜¤ë¸Œì íŠ¸ë“¤ì„ ë¦¬ìŠ¤í° í¬ì¸íŠ¸ë¡œ ë“±ë¡ (íŠ¸ë¦¬ê±°/ì½œë¼ì´ë” ìë™ ì„¸íŒ…)
         int count = transform.childCount;
         respawnPoints = new Transform[count];
-
         for (int i = 0; i < count; i++)
         {
             Transform point = transform.GetChild(i);
-            respawnPoints[i] = point;
-
-            var trigger = point.gameObject.AddComponent<RespawnTriggerPoint>();
+            // ì´ë¯¸ ë¶™ì–´ ìˆìœ¼ë©´ ì¬ì‚¬ìš©, ì—†ìœ¼ë©´ ìƒˆë¡œ ë¶™ì„
+            var trigger = point.GetComponent<RespawnTriggerPoint>();
+            if (trigger == null)
+                trigger = point.gameObject.AddComponent<RespawnTriggerPoint>();
             trigger.manager = this;
-            trigger.index = i;
+            trigger.index = i+1;
+            var col = point.GetComponent<BoxCollider>();
+            if (col == null) col = point.gameObject.AddComponent<BoxCollider>();
+            col.isTrigger = true;
         }
-
+        // í”Œë ˆì´ì–´ì™€ ì´ë™ ìŠ¤í¬ë¦½íŠ¸ ìºì‹±
         player = GameObject.FindGameObjectWithTag("Player");
-
+        animator = player.GetComponent<Animator>();
+        if (player != null)
+            playerMovement = player.GetComponent<PlayerMovement>();
     }
-
-    // Æ®¸®°Å ¹æ½ÄÀ¸·Î ¹ú·¹ or ÇÃ·¹ÀÌ¾î °¨Áö
+    private void Update()
+    {
+        // ì´ë™ ì ê¸ˆ í•´ì œ ì²´í¬
+        if (isMovementLocked && Time.time >= movementLockEndTime)
+        {
+            if (playerMovement != null)
+                playerMovement.enabled = true;
+            isMovementLocked = false;
+        }
+    }
     private void OnTriggerEnter(Collider other)
     {
         if (reachedLastPoint) return;
-
-        // ¸¸¾à ÇÃ·¹ÀÌ¾î º»Ã¼°¡ Á÷Á¢ ¶³¾îÁ³´Ù¸é ±×´ë·Î ¸®½ºÆù
         if (other.CompareTag("Player"))
         {
-            Debug.Log("Player hit the respawn trigger.");
+            Debug.Log("ë°”ë‹¥");
+            SetRespawnIndex(currentRespawnIndex);
             RespawnPlayer();
             return;
         }
-
-        // ±×·¸Áö ¾Ê´Ù¸é, ¹ú·¹ÀÏ °¡´É¼ºÀÌ ÀÖÀ½. ¹ú·¹¿¡ Å¾½ÂÇÑ ÇÃ·¹ÀÌ¾î¸¦ Ã£À½
-        Transform playerTransform = other.transform.Find("Player");
-
-        if (playerTransform == null)
+        // ë²Œë ˆ íƒ‘ìŠ¹ í”Œë ˆì´ì–´ ê°ì§€
+        Transform playerTf = other.transform.Find("Player");
+        if (playerTf == null)
         {
-            // ÀÚ½Äµé Áß¿¡¼­ Player ÅÂ±×¸¦ °¡Áø ¿ÀºêÁ§Æ® Å½»ö
             foreach (Transform child in other.transform)
-            {
                 if (child.CompareTag("Player"))
                 {
-                    playerTransform = child;
+                    playerTf = child;
                     break;
                 }
-            }
         }
-
-        if (playerTransform != null)
+        if (playerTf != null)
         {
-            Debug.Log("Bug with player hit the respawn trigger.");
-
-            // ÇÃ·¹ÀÌ¾î¸¸ ºĞ¸®ÇØ¼­ ¸®½ºÆù
-            RespawnPlayerFromObject(playerTransform.gameObject);
-
+            SetRespawnIndex(currentRespawnIndex);
+            RespawnPlayerFromObject(playerTf.gameObject);
             other.gameObject.SetActive(false);
-
-            // ¹ú·¹ ¿ÀºêÁ§Æ® ÆÄ±«
             Destroy(other.gameObject);
         }
     }
-
     public void SetRespawnIndex(int index)
     {
-        if (index > currentRespawnIndex)
+        if (true)
         {
             currentRespawnIndex = index;
-
-            if (index >= respawnPoints.Length - 1)
+            if (index >= respawnPoints.Length)
             {
                 reachedLastPoint = true;
                 Debug.Log("Reached last respawn point.");
             }
         }
     }
-
-    // ÀÏ¹İ ¸®½ºÆù (È¥ÀÚ ¶³¾îÁ³À» ¶§)
+    // ì¼ë°˜ ë¦¬ìŠ¤í° (ì›”ë“œ ì¢Œí‘œ ì‚¬ìš©)
     public void RespawnPlayer()
     {
         if (player == null) return;
-
-        CharacterController controller = player.GetComponent<CharacterController>();
-        if (controller != null) controller.enabled = false;
-
-        player.transform.position = respawnPoints[currentRespawnIndex].position + Vector3.up * 0.1f;
-
-        if (controller != null) controller.enabled = true;
-
-        Debug.Log($"Respawned to point {currentRespawnIndex}");
+        // Rigidbody ì´ˆê¸°í™”
+        var rb = player.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        // ì›”ë“œ ìœ„ì¹˜Â·íšŒì „ ê²°ì •
+        GetWorldTransform(currentRespawnIndex, out Vector3 worldPos, out Quaternion worldRot);
+        // ì›”ë“œ ì¢Œí‘œ í…”ë ˆí¬íŠ¸
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.position = worldPos;
+            rb.rotation = worldRot;
+            rb.isKinematic = false;
+        }
+        else
+        {
+            player.transform.SetPositionAndRotation(worldPos, worldRot);
+        }
+        // ì›”ë“œ ì¢Œí‘œ ë¡œê·¸ ì°ê¸°
+        Debug.Log($"[RespawnPlayer] WorldPos={worldPos:F3}, WorldRot={worldRot.eulerAngles}");
+        // ì—°ê¸° ì¬ë°°ì¹˜
+        UpdateSmoke(player.transform);
+        // 2ì´ˆê°„ ì´ë™ ì ê¸ˆ
+        LockMovement();
     }
-
-    // ¹ú·¹¿¡¼­ ¶³¾îÁ³À» ¶§ ¿ÜºÎ¿¡¼­ ¹ŞÀº ÇÃ·¹ÀÌ¾î ¸®½ºÆù
+    // ë²Œë ˆì—ì„œ ë–¨ì–´ì¡Œì„ ë•Œ ë¦¬ìŠ¤í° (ì›”ë“œ ì¢Œí‘œ ì‚¬ìš©)
     public void RespawnPlayerFromObject(GameObject targetPlayer)
     {
         if (targetPlayer == null) return;
-
-        CharacterController controller = targetPlayer.GetComponent<CharacterController>();
-        if (controller != null) controller.enabled = false;
-
-        PlayerMovement movement = targetPlayer.GetComponent<PlayerMovement>();
-        if (movement != null)
+        var mov = targetPlayer.GetComponent<PlayerMovement>();
+        animator.SetBool("is_riding_on_bug", false);
+        if (mov != null)
+            mov.ForceFallFromBug();
+        // Rigidbody ì´ˆê¸°í™”
+        var rb = targetPlayer.GetComponent<Rigidbody>();
+        if (rb != null)
         {
-            movement.ForceFallFromBug();
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
-        targetPlayer.transform.SetParent(null); // ¹ú·¹·ÎºÎÅÍ ºĞ¸®
-        targetPlayer.transform.position = respawnPoints[currentRespawnIndex].position + Vector3.up * 0.5f;
-
-        if (controller != null) controller.enabled = true;
-
-        Debug.Log($"[Mounted] Respawned player to point {currentRespawnIndex}");
+        // ì›”ë“œ ìœ„ì¹˜Â·íšŒì „ ê²°ì •
+        GetWorldTransform(currentRespawnIndex, out Vector3 worldPos, out Quaternion worldRot);
+        // ì›”ë“œ ì¢Œí‘œ í…”ë ˆí¬íŠ¸
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.position = worldPos;
+            rb.rotation = worldRot;
+            rb.isKinematic = false;
+        }
+        else
+        {
+            targetPlayer.transform.SetPositionAndRotation(worldPos, worldRot);
+        }
+        // ì›”ë“œ ì¢Œí‘œ ë¡œê·¸
+        Debug.Log($"[RespawnFromObject] WorldPos={worldPos:F3}, WorldRot={worldRot.eulerAngles}");
+        // ì—°ê¸° ì¬ë°°ì¹˜
+        UpdateSmoke(targetPlayer.transform);
+        // 2ì´ˆê°„ ì´ë™ ì ê¸ˆ
+        LockMovement();
+    }
+    // ì¸ë±ìŠ¤ë³„ í•˜ë“œì½”ë”© ì›”ë“œ ìœ„ì¹˜Â·íšŒì „
+    private void GetWorldTransform(int idx, out Vector3 pos, out Quaternion rot)
+    {
+        switch (idx)
+        {
+            case 1:
+                pos = new Vector3(-70.5f, -0.3f, 30.3f);
+                rot = Quaternion.Euler(0f, 90f, 0f);
+                break;
+            case 2:
+                pos = new Vector3(44.1f, 5.58f, 28.11f);
+                rot = Quaternion.Euler(0f, 180f, 0f);
+                break;
+            case 3:
+                pos = new Vector3(31f, -0.37f, -66.1f);
+                rot = Quaternion.Euler(0f, 270f, 0f);
+                break;
+            // í•„ìš”í•œ ì¸ë±ìŠ¤ë§Œí¼ case ë¥¼ ì¶”ê°€í•˜ì„¸ìš”
+            default:
+                // fallback: ì²« ë¦¬ìŠ¤í° í¬ì¸íŠ¸ ì›”ë“œ ì¢Œí‘œ
+                pos = respawnPoints.Length > 0
+                    ? respawnPoints[0].position + Vector3.up * 0.1f
+                    : Vector3.zero;
+                rot = respawnPoints.Length > 0
+                    ? respawnPoints[0].rotation
+                    : Quaternion.identity;
+                Debug.LogWarning("Unknown respawn index. Using fallback world transform.");
+                break;
+        }
+    }
+    // ì—°ê¸° ìœ„ì¹˜ ê°±ì‹  (ì›”ë“œ ê¸°ì¤€)
+    private void UpdateSmoke(Transform playerTf)
+    {
+        StartCoroutine(SnapSmokeNextFrame(playerTf));
+    }
+    private IEnumerator SnapSmokeNextFrame(Transform playerTf)
+    {
+        var smokeCtrl = smoke.GetComponent<SmokeMovement>();
+        // SmokeMovement ë¹„í™œì„±í™” â†’ ê°•ì œ ìœ„ì¹˜ ì´ë™ ì¤‘ ì´ë™ ë°©ì§€
+        if (smokeCtrl != null)
+        {
+            smokeCtrl.enabled = false;
+            smokeCtrl.target = playerTf; // ëŒ€ìƒ ì„¤ì •ì€ ë¯¸ë¦¬ í•´ë†“ìŒ
+        }
+        yield return null; // :í°ìƒ‰_í™•ì¸_í‘œì‹œ: 1 í”„ë ˆì„ ëŒ€ê¸° (ë¦¬ìŠ¤í° ë°˜ì˜ í›„)
+        // ìµœì‹  forwardë¥¼ ë°˜ì˜í•œ ìœ„ì¹˜ë¡œ ì´ë™
+        Vector3 newPos = playerTf.position - 5f * playerTf.forward;
+        smoke.transform.position = newPos;
+        Debug.Log($"[SnapSmoke] Moved smoke to {newPos}");
+        if (smokeCtrl != null)
+            smokeCtrl.enabled = true;
+    }
+    // ì´ë™ ì ê¸ˆ
+    private void LockMovement()
+    {
+        if (playerMovement != null)
+            playerMovement.enabled = false;
+        isMovementLocked = true;
+        movementLockEndTime = Time.time + 2f;
     }
 }

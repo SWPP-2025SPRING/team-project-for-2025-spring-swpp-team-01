@@ -1,40 +1,48 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-
 public class SmokeMovement : MonoBehaviour
 {
-    public Transform target;         // 쫓을 대상 (플레이어)
-    public float moveSpeed = 2f;     // 이동 속도
+    [Header("추적 대상")]
+    public Transform target;           // 플레이어
+    [Header("자동 추적 설정")]
+    public bool autoFollow = true;     // true면 Update()로 계속 추적
+    [Header("이동 파라미터")]
+    public float moveSpeed = 2f;
     public float heightOffset = 1.24f;
-
-    void Update()
+    public float behind = 5f;
+    /* ---------- 외부에서 호출할 스냅 함수 ---------- */
+    public void SnapBehindTarget()
     {
         if (target == null) return;
-
-        // 목표 위치 (높이 포함)
-        Vector3 targetPosition = target.position -0.7f*target.forward;
-
-        // 현재 위치 기준으로 목표와의 방향 벡터 계산 (Y축만 사용)
-        Vector3 direction = targetPosition - transform.position;
-        direction.y = 0f;  // Y축 무시 → XZ 평면 방향만 사용
-
-        if (direction.sqrMagnitude > 0.001f)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
-        }
-
-        // 이동
-        transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+        // 정확히 플레이어 뒤 + 높이 오프셋
+        Vector3 snapPos = target.position
+                        + Vector3.up * heightOffset
+                        - target.forward * behind;
+        transform.position = snapPos;
+        // 플레이어를 바라보도록 회전
+        Vector3 dir = (target.position - transform.position);
+        dir.y = 0f;
+        if (dir.sqrMagnitude > 0.001f)
+            transform.rotation = Quaternion.LookRotation(dir);
     }
-
-    private void OnTriggerEnter(Collider other)
+    /* ---------- 자동 추적 ---------- */
+    void Update()
     {
-        if (other.CompareTag("Player"))
+        if (!autoFollow || target == null) return;
+        Vector3 targetPos = target.position
+                          + Vector3.up * heightOffset
+                          - target.forward * behind;
+        // 회전
+        Vector3 dir = targetPos - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude > 0.001f)
         {
-            // 플레이어가 죽는 처리
-            Debug.Log("연기에 닿음!");  // 또는 Destroy(other.gameObject);
+            Quaternion targetRot = Quaternion.LookRotation(dir);
+            transform.rotation = Quaternion.Slerp(transform.rotation,
+                                                  targetRot, 10f * Time.deltaTime);
         }
+        // 이동
+        transform.position = Vector3.MoveTowards(transform.position,
+                                                 targetPos,
+                                                 moveSpeed * Time.deltaTime);
     }
 }
