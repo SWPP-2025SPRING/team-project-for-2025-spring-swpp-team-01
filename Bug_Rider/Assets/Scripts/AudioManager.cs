@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
+
     [System.Serializable]
     public class AudioEntry
     {
@@ -12,11 +13,20 @@ public class AudioManager : MonoBehaviour
         public AudioConfig config;
     }
 
-
     public List<AudioEntry> audioEntries;
 
     private Dictionary<string, AudioConfig> audioDict;
-    public AudioSource audioSource;
+    public AudioSource bgmSource;
+    public AudioSource bugSource;
+    public AudioSource obstacleSource;
+
+    public float bgmFadeDuration = 1.5f;
+    public float fadeInTime = 0.3f;
+    public float fadeOutTime = 0.3f;
+
+    private Coroutine bgmFadeCoroutine;
+    private Coroutine bugCoroutine;
+    private Coroutine obstacleCoroutine;
 
     void Awake()
     {
@@ -24,8 +34,14 @@ public class AudioManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            // audioSource = gameObject.AddComponent<AudioSource>();
             InitDictionary();
+
+            if (bgmSource == null)
+                bgmSource = gameObject.AddComponent<AudioSource>();
+            if (bugSource == null)
+                bugSource = gameObject.AddComponent<AudioSource>();
+            if (obstacleSource == null)
+                obstacleSource = gameObject.AddComponent<AudioSource>();
         }
         else
         {
@@ -43,51 +59,130 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    public void Play(string key, bool loop = false)
+    // ---------------- BGM ----------------
+
+    public void PlayBGM(string key, bool loop = true)
+    {
+        if (!audioDict.ContainsKey(key)) return;
+        AudioConfig config = audioDict[key];
+        if (config == null || config.clip == null) return;
+
+        if (bgmFadeCoroutine != null)
+            StopCoroutine(bgmFadeCoroutine);
+
+        bgmSource.clip = config.clip;
+        bgmSource.loop = loop;
+        bgmSource.pitch = config.pitch;
+        bgmSource.time = config.startTime;
+        bgmSource.volume = 0f;
+        bgmSource.Play();
+
+        bgmFadeCoroutine = StartCoroutine(FadeIn(bgmSource, config.volume, bgmFadeDuration));
+    }
+
+    public void StopBGM()
+    {
+        if (bgmFadeCoroutine != null)
+            StopCoroutine(bgmFadeCoroutine);
+
+        bgmFadeCoroutine = StartCoroutine(FadeOutAndStop(bgmSource, bgmFadeDuration));
+    }
+
+    // ---------------- Bug Sound ----------------
+
+    public void PlayBug(string key, bool loop = false)
     {
         if (!audioDict.ContainsKey(key)) return;
         AudioConfig config = audioDict[key];
 
-        StopAllCoroutines();
-        StartCoroutine(PlayWithConfig(config, loop));
+        if (bugCoroutine != null)
+            StopCoroutine(bugCoroutine);
+
+        bugCoroutine = StartCoroutine(PlaySoundCoroutine(bugSource, config, loop));
     }
 
-    private IEnumerator PlayWithConfig(AudioConfig config, bool loop)
+    public void StopBug()
+    {
+        if (bugCoroutine != null)
+            StopCoroutine(bugCoroutine);
+        StartCoroutine(FadeOutAndStop(bugSource, fadeOutTime));
+    }
+
+    // ---------------- Obstacle Sound ----------------
+
+    public void PlayObstacle(string key, bool loop = false)
+    {
+        if (!audioDict.ContainsKey(key)) return;
+        AudioConfig config = audioDict[key];
+
+        if (obstacleCoroutine != null)
+            StopCoroutine(obstacleCoroutine);
+
+        obstacleCoroutine = StartCoroutine(PlaySoundCoroutine(obstacleSource, config, loop));
+    }
+
+    public void StopObstacle()
+    {
+        if (obstacleCoroutine != null)
+            StopCoroutine(obstacleCoroutine);
+        StartCoroutine(FadeOutAndStop(obstacleSource, fadeOutTime));
+    }
+
+    // ---------------- Common Coroutine ----------------
+
+    private IEnumerator PlaySoundCoroutine(AudioSource source, AudioConfig config, bool loop)
     {
         if (config == null || config.clip == null) yield break;
-        Debug.Log($"PlayWithConfig: clip={config.clip?.name}, volume={config.volume}, pitch={config.pitch}");
 
-        audioSource.loop = false;
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
+        source.clip = config.clip;
+        source.loop = loop;
+        source.pitch = config.pitch;
+        source.time = config.startTime;
+        source.volume = 0f;
+        source.Play();
+
+        yield return StartCoroutine(FadeIn(source, config.volume, fadeInTime));
+
+        if (loop)
+        {
+            // 루프는 여기서 끝 (계속 재생됨)
+            yield break;
+        }
 
         float duration = (config.endTime > 0)
             ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
             : config.clip.length - config.startTime;
 
-        if (loop)
-        {
-            while (true)
-            {
-                yield return new WaitForSeconds(duration);
-                audioSource.time = config.startTime;
-                audioSource.Play();
-            }
-        }
-        else
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.Stop();
-        }
+        float playTime = duration - fadeOutTime;
+        if (playTime > 0)
+            yield return new WaitForSeconds(playTime);
+
+        yield return StartCoroutine(FadeOutAndStop(source, fadeOutTime));
     }
 
-    public void Stop()
+    private IEnumerator FadeIn(AudioSource source, float targetVolume, float duration)
     {
-        Debug.Log("StopAllCoroutines");
-        StopAllCoroutines();
-        audioSource.Stop();
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            source.volume = Mathf.Lerp(0f, targetVolume, t / duration);
+            yield return null;
+        }
+        source.volume = targetVolume;
+    }
+
+    private IEnumerator FadeOutAndStop(AudioSource source, float duration)
+    {
+        float startVolume = source.volume;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            source.volume = Mathf.Lerp(startVolume, 0f, t / duration);
+            yield return null;
+        }
+        source.volume = 0f;
+        source.Stop();
     }
 }
