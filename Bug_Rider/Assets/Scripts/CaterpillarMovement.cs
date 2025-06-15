@@ -29,14 +29,6 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
     private IBugMovementStrategy walkStrategy;
     private PlayerMovement mountedPlayer;
 
-    public AudioSource audioSource;
-    public AudioConfig walkAudio;
-    public AudioConfig butterflyAudio;
-    public AudioConfig beeAudio;
-    public AudioConfig mothAudio;
-    public AudioConfig stunAudio;
-    public AudioConfig dropAudio;
-
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -73,7 +65,6 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetBool("is_walking", false);
-            PlaySound(dropAudio, false);
 
             if (transformationRoutine != null)
                 StopCoroutine(transformationRoutine);
@@ -82,7 +73,6 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
             transformationRoutine = StartCoroutine(DelayedTransformation());
-            PlaySound(walkAudio, true);
         }
     }
 
@@ -109,34 +99,7 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
 
         mountedPlayer?.Mount(newBug.transform);
 
-        // 변신 사운드 재생
-        PlayTransformSound(chosen);
-
         Destroy(gameObject); // 애벌레 제거
-    }
-
-    private void PlayTransformSound(GameObject bugPrefab)
-    {
-        Debug.Log("PlayTransformSound");
-        if (audioSource == null) return;
-
-        // 먼저 기존 배경 소리 멈춤
-        audioSource.Stop();
-        audioSource.loop = false;
-
-        if (bugPrefab == mothPrefab && mothAudio != null)
-        {
-            PlaySound(mothAudio);
-        }
-        else if (bugPrefab == butterflyPrefab && butterflyAudio != null)
-        {
-            PlaySound(butterflyAudio);
-        }
-        else if (bugPrefab == beePrefab && beeAudio != null)
-        {
-            PlaySound(beeAudio);
-        }
-        Debug.Log("PlayedTransformSound");
     }
 
 
@@ -173,53 +136,10 @@ public class CaterpillarMovement : MonoBehaviour, IRideableBug
         {
             if (animator != null && animator.runtimeAnimatorController != null)
                 animator.SetTrigger("is_drop");
-            PlaySound(stunAudio, true);
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
             SetMounted(false);
         }
     }
-
-    private void PlaySound(AudioConfig config, bool loop = false)
-    {
-        if (config == null || config.clip == null || audioSource == null) return;
-
-        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
-
-        float duration = (config.endTime > 0)
-            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
-            : config.clip.length - config.startTime;
-
-        if (loop)
-        {
-            StartCoroutine(CustomLoop(config, duration));
-        }
-        else
-        {
-            StartCoroutine(StopAfter(duration));
-        }
-    }
-
-    private IEnumerator CustomLoop(AudioConfig config, float duration)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.time = config.startTime;
-            audioSource.Play();
-        }
-    }
-
-    private IEnumerator StopAfter(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        audioSource.Stop();
-    }
-
 }

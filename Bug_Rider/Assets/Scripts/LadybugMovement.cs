@@ -32,9 +32,10 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         animator = GetComponent<Animator>();
-
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator);
+
+        FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -64,12 +65,10 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
 
         if (!mounted)
         {
-            flyStrategy.StopFlight();
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
             FlyUI?.SetActive(false);
-            countdownText.text = "";
         }
         else
         {
@@ -112,7 +111,7 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
             animator?.SetTrigger("is_drop");
 
             flyStrategy.StopFlight();
-            FlyUI?.SetActive(false); 
+            FlyUI?.SetActive(false);
 
             var player = GetComponentInChildren<PlayerMovement>();
             player?.ForceFallFromBug();
@@ -126,5 +125,4 @@ public class LadybugMovement : MonoBehaviour, IRideableBug
         FlyUI = flyUI;
         countdownText = countdown;
     }
-
 }

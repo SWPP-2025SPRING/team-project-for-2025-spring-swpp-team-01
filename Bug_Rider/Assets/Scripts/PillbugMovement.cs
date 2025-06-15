@@ -19,13 +19,6 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
     private Animator animator;
     private Coroutine approachRoutine;
 
-    public AudioSource audioSource;
-    public AudioConfig rollAudio;
-    public AudioConfig stunAudio;
-    public AudioConfig dropAudio;
-
-
-
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -73,13 +66,11 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
             rb.angularVelocity = Vector3.zero;
             currentSpeed = baseSpeed;
             animator.SetBool("is_rolling", false);
-            PlaySound(dropAudio, false);
         }
         else
         {
             currentSpeed = baseSpeed;
             animator.SetBool("is_rolling", true);
-            PlaySound(rollAudio, true);
         }
     }
 
@@ -115,48 +106,8 @@ public class PillbugMovement : MonoBehaviour, IRideableBug
         var player = GetComponentInChildren<PlayerMovement>();
         animator?.SetTrigger("is_dropping");
         Debug.Log("is_dropping triggered");
-        PlaySound(stunAudio);
+
         player?.ForceFallFromBug();
         SetMounted(false);
-    }
-    private void PlaySound(AudioConfig config, bool loop = false)
-    {
-        if (config == null || config.clip == null || audioSource == null) return;
-
-        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
-
-        float duration = (config.endTime > 0)
-            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
-            : config.clip.length - config.startTime;
-
-        if (loop)
-        {
-            StartCoroutine(CustomLoop(config, duration));
-        }
-        else
-        {
-            StartCoroutine(StopAfter(duration));
-        }
-    }
-
-    private IEnumerator CustomLoop(AudioConfig config, float duration)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.time = config.startTime;
-            audioSource.Play();
-        }
-    }
-
-    private IEnumerator StopAfter(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        audioSource.Stop();
     }
 }

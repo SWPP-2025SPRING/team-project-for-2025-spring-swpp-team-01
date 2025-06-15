@@ -5,14 +5,12 @@ using TMPro;
 [RequireComponent(typeof(Rigidbody))]
 public class AntMovement : MonoBehaviour, IRideableBug
 {
-    public float acceleration = 5f;      // 가속도
-    public float maxSpeed = 5f;           // 최대 속도
-    public float rotationSpeed = 45f;    // 회전 속도
-    public float dashSpeed = 10f;
-    public float dashDuration = 1f;
+    public float moveSpeed = 3f;
+    public float rotationSpeed = 180f;
+    public float dashSpeed = 15f;
+    public float dashDuration = 0.4f;
     public float dashCooldown = 1f;
     public float obstacleCheckDist = 0.8f;
-    public float moveSpeed = 10f;
 
     public LayerMask obstacleMask;
     public GameObject DashUI;
@@ -26,7 +24,8 @@ public class AntMovement : MonoBehaviour, IRideableBug
     private Rigidbody rb;
     private Animator antAnimator;
     private Coroutine approachRoutine;
-    private Vector3 currentVel = Vector3.zero;   // 가속도 적용 속도 벡터
+
+    private IBugMovementStrategy walkStrategy;
 
     void Awake()
     {
@@ -36,11 +35,14 @@ public class AntMovement : MonoBehaviour, IRideableBug
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         antAnimator = GetComponent<Animator>();
+        walkStrategy = new WalkMovementStrategy();
+        DashUI?.SetActive(false);
     }
 
     void Update()
     {
         if (!isMounted || isDashing || !canDash) return;
+
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             StartCoroutine(Dash());
@@ -49,54 +51,10 @@ public class AntMovement : MonoBehaviour, IRideableBug
 
     void FixedUpdate()
     {
-        if (!isMounted || isApproaching) return;
+        if (!isMounted || isApproaching || isDashing) return;
 
-        if (isDashing)
-        {
-            rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
-            return;
-        }
-
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-
-        if (Mathf.Abs(h) > 0.01f)
-        {
-            float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
-            Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
-            rb.MoveRotation(rb.rotation * deltaRotation);
-        }
-
-        Vector3 forward = rb.rotation * Vector3.forward;
-        if (Mathf.Abs(v) > 0.01f)
-        {
-            Vector3 targetVel = forward * v * maxSpeed;
-            currentVel = Vector3.MoveTowards(currentVel, targetVel, acceleration * Time.fixedDeltaTime);
-
-            // Clamp speed
-            if (currentVel.magnitude > maxSpeed)
-                currentVel = currentVel.normalized * maxSpeed;
-
-            Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
-            if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
-            {
-                rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
-            }
-        }
-        else
-        {
-            currentVel = Vector3.MoveTowards(currentVel, Vector3.zero, acceleration * Time.fixedDeltaTime);
-
-            // Clamp speed
-            if (currentVel.magnitude > maxSpeed)
-                currentVel = currentVel.normalized * maxSpeed;
-
-            rb.MovePosition(rb.position + currentVel * Time.fixedDeltaTime);
-        }
-
-        antAnimator?.SetBool("is_walking", currentVel.magnitude > 0.1f);
+        walkStrategy.HandleMovement(rb, antAnimator, obstacleMask, moveSpeed, rotationSpeed, obstacleCheckDist);
     }
-
 
     public IEnumerator Dash()
     {
@@ -107,14 +65,13 @@ public class AntMovement : MonoBehaviour, IRideableBug
         antAnimator?.SetTrigger("is_dashing");
 
         Vector3 dashDir = rb.rotation * Vector3.forward;
-        currentVel = dashDir * dashSpeed;
+        float elapsed = 0f;
 
-        float dashElapsed = 0f;
-        while (dashElapsed < dashDuration)
+        while (elapsed < dashDuration)
         {
-            // dash 동안 속도 유지
-            currentVel = dashDir * dashSpeed;
-            dashElapsed += Time.fixedDeltaTime;
+            Vector3 next = rb.position + dashDir * dashSpeed * Time.fixedDeltaTime;
+            rb.MovePosition(next);
+            elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 

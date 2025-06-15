@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 using TMPro;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -26,10 +25,6 @@ public class BeeMovement : MonoBehaviour, IRideableBug
     private FlyMovementStrategy flyStrategy;
     private PlayerMovement mountedPlayer;  // 추가
 
-    public AudioSource audioSource;
-    public AudioConfig flyAudio;
-    public AudioConfig dropAudio;
-
 
     void Awake()
     {
@@ -43,7 +38,7 @@ public class BeeMovement : MonoBehaviour, IRideableBug
         walkStrategy = new WalkMovementStrategy();
         flyStrategy = new FlyMovementStrategy(this, countdownText, FlyUI, rb, animator, true);
 
-        // FlyUI?.SetActive(false);
+        FlyUI?.SetActive(false);
     }
 
     void Update()
@@ -52,7 +47,6 @@ public class BeeMovement : MonoBehaviour, IRideableBug
 
         if (Input.GetKeyDown(KeyCode.Space) && flyStrategy.CanFly)
         {
-            PlaySound(flyAudio, true);
             flyStrategy.StartFlight();
         }
     }
@@ -74,12 +68,11 @@ public class BeeMovement : MonoBehaviour, IRideableBug
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             animator?.SetBool("is_walking", false);
-            PlaySound(dropAudio);
-            // FlyUI?.SetActive(false);
+            FlyUI?.SetActive(false);
         }
         else
         {
-            // FlyUI?.SetActive(true);
+            FlyUI?.SetActive(true);
             mountedPlayer = GetComponentInChildren<PlayerMovement>();
         }
     }
@@ -124,46 +117,5 @@ public class BeeMovement : MonoBehaviour, IRideableBug
         //     player?.ForceFallFromBug();
         //     SetMounted(false);
         // }
-    }
-
-    private void PlaySound(AudioConfig config, bool loop = false)
-    {
-        if (config == null || config.clip == null || audioSource == null) return;
-
-        audioSource.loop = false;  // Unity 기본 loop는 쓰지 않는다
-        audioSource.clip = config.clip;
-        audioSource.volume = config.volume;
-        audioSource.pitch = config.pitch;
-        audioSource.time = config.startTime;
-        audioSource.Play();
-
-        float duration = (config.endTime > 0)
-            ? Mathf.Clamp(config.endTime - config.startTime, 0f, config.clip.length - config.startTime)
-            : config.clip.length - config.startTime;
-
-        if (loop)
-        {
-            StartCoroutine(CustomLoop(config, duration));
-        }
-        else
-        {
-            StartCoroutine(StopAfter(duration));
-        }
-    }
-
-    private IEnumerator CustomLoop(AudioConfig config, float duration)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(duration);
-            audioSource.time = config.startTime;
-            audioSource.Play();
-        }
-    }
-
-    private IEnumerator StopAfter(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        audioSource.Stop();
     }
 }
