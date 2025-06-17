@@ -1,10 +1,12 @@
 using UnityEngine;
+using System.Collections;
 public class RespawnManager : MonoBehaviour
 {
     public Transform[] respawnPoints;
     private int currentRespawnIndex = 0;
     private bool reachedLastPoint = false;
     private GameObject player;
+    private Animator animator;
     public GameObject smoke;
     /* ---------- 이동 잠금용 변수 ---------- */
     private float movementLockEndTime = 0f;    // 잠금이 풀릴 절대 시각
@@ -18,15 +20,19 @@ public class RespawnManager : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Transform point = transform.GetChild(i);
-            respawnPoints[i] = point;
-            var trigger = point.gameObject.AddComponent<RespawnTriggerPoint>();
+            // 이미 붙어 있으면 재사용, 없으면 새로 붙임
+            var trigger = point.GetComponent<RespawnTriggerPoint>();
+            if (trigger == null)
+                trigger = point.gameObject.AddComponent<RespawnTriggerPoint>();
             trigger.manager = this;
-            trigger.index = i;
-            var col = point.gameObject.AddComponent<BoxCollider>();
+            trigger.index = i+1;
+            var col = point.GetComponent<BoxCollider>();
+            if (col == null) col = point.gameObject.AddComponent<BoxCollider>();
             col.isTrigger = true;
         }
         // 플레이어와 이동 스크립트 캐싱
         player = GameObject.FindGameObjectWithTag("Player");
+        animator = player.GetComponent<Animator>();
         if (player != null)
             playerMovement = player.GetComponent<PlayerMovement>();
     }
@@ -45,6 +51,7 @@ public class RespawnManager : MonoBehaviour
         if (reachedLastPoint) return;
         if (other.CompareTag("Player"))
         {
+            Debug.Log("바닥");
             SetRespawnIndex(currentRespawnIndex);
             RespawnPlayer();
             return;
@@ -70,10 +77,10 @@ public class RespawnManager : MonoBehaviour
     }
     public void SetRespawnIndex(int index)
     {
-        if (index > currentRespawnIndex)
+        if (true)
         {
             currentRespawnIndex = index;
-            if (index >= respawnPoints.Length - 1)
+            if (index >= respawnPoints.Length)
             {
                 reachedLastPoint = true;
                 Debug.Log("Reached last respawn point.");
@@ -117,6 +124,7 @@ public class RespawnManager : MonoBehaviour
     {
         if (targetPlayer == null) return;
         var mov = targetPlayer.GetComponent<PlayerMovement>();
+        animator.SetBool("is_riding_on_bug", false);
         if (mov != null)
             mov.ForceFallFromBug();
         // Rigidbody 초기화
@@ -152,15 +160,15 @@ public class RespawnManager : MonoBehaviour
     {
         switch (idx)
         {
-            case 0:
+            case 1:
                 pos = new Vector3(-70.5f, -0.3f, 30.3f);
                 rot = Quaternion.Euler(0f, 90f, 0f);
                 break;
-            case 1:
+            case 2:
                 pos = new Vector3(44.1f, 5.58f, 28.11f);
                 rot = Quaternion.Euler(0f, 180f, 0f);
                 break;
-            case 2:
+            case 3:
                 pos = new Vector3(31f, -0.37f, -66.1f);
                 rot = Quaternion.Euler(0f, 270f, 0f);
                 break;
@@ -180,10 +188,24 @@ public class RespawnManager : MonoBehaviour
     // 연기 위치 갱신 (월드 기준)
     private void UpdateSmoke(Transform playerTf)
     {
+        StartCoroutine(SnapSmokeNextFrame(playerTf));
+    }
+    private IEnumerator SnapSmokeNextFrame(Transform playerTf)
+    {
         var smokeCtrl = smoke.GetComponent<SmokeMovement>();
-        if (smokeCtrl != null) smokeCtrl.enabled = false;
-        smoke.transform.position = playerTf.position - 5f * playerTf.forward;
-        if (smokeCtrl != null) smokeCtrl.enabled = true;
+        // SmokeMovement 비활성화 → 강제 위치 이동 중 이동 방지
+        if (smokeCtrl != null)
+        {
+            smokeCtrl.enabled = false;
+            smokeCtrl.target = playerTf; // 대상 설정은 미리 해놓음
+        }
+        yield return null; // :흰색_확인_표시: 1 프레임 대기 (리스폰 반영 후)
+        // 최신 forward를 반영한 위치로 이동
+        Vector3 newPos = playerTf.position - 5f * playerTf.forward;
+        smoke.transform.position = newPos;
+        Debug.Log($"[SnapSmoke] Moved smoke to {newPos}");
+        if (smokeCtrl != null)
+            smokeCtrl.enabled = true;
     }
     // 이동 잠금
     private void LockMovement()
