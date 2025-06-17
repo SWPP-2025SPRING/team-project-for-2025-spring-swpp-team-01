@@ -134,6 +134,7 @@ public class FlyMovementStrategy
             Vector3 pos = rb.position;
             pos.y = Mathf.MoveTowards(pos.y, pos.y - 1f, descendSpeedFall * Time.fixedDeltaTime);
             rb.MovePosition(pos);
+
             yield return new WaitForFixedUpdate();
         }
         rb.useGravity = true;

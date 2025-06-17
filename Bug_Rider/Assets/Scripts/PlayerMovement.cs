@@ -37,6 +37,7 @@ public class PlayerMovement : MonoBehaviour
     }
     void Update()
     {
+        // 탑승 중이면 이동·회전·힘 적용 모두 중지 (벌레 오브젝트가 조종)
         if (isMounted)
         {
             if (Input.GetKeyDown(KeyCode.E)) Unmount();
@@ -164,6 +165,7 @@ public class PlayerMovement : MonoBehaviour
         float fallSpeed = -10f;
         float elapsed = 0f;
         animator.SetTrigger("is_falling");
+        // 낙하시 수직속도만 직접 제어(물리엔진 우선)
         while (elapsed < fallDuration)
         {
             elapsed += Time.deltaTime;
