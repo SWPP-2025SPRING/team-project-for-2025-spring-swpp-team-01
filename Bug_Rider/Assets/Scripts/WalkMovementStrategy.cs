@@ -1,35 +1,78 @@
 using UnityEngine;
-
-public class WalkMovementStrategy : IBugMovementStrategy
+public class WalkMovementStrategy
 {
-    public void HandleMovement(Rigidbody rb, Animator animator, LayerMask obstacleMask, float moveSpeed, float rotationSpeed, float obstacleCheckDist)
+    private Rigidbody rb;
+    private Animator animator;
+    private LayerMask obstacleMask;
+    private float acceleration;
+    private float maxSpeed;
+    private float angularAcceleration;
+    private float maxAngularSpeed;
+    private float obstacleCheckDist;
+    private bool useAngularAcceleration;
+    private float currentAngularSpeed = 0f;
+    public WalkMovementStrategy(
+        Rigidbody rb,
+        Animator animator,
+        LayerMask obstacleMask,
+        float acceleration,
+        float maxSpeed,
+        float angularAcceleration,
+        float maxAngularSpeed,
+        float obstacleCheckDist,
+        bool useAngularAcceleration = false
+    )
     {
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-
-        if (Mathf.Abs(v) > 0.01f && Mathf.Abs(h) > 0.01f)
+        this.rb = rb;
+        this.animator = animator;
+        this.obstacleMask = obstacleMask;
+        this.acceleration = acceleration;
+        this.maxSpeed = maxSpeed;
+        this.angularAcceleration = angularAcceleration;
+        this.maxAngularSpeed = maxAngularSpeed;
+        this.obstacleCheckDist = obstacleCheckDist;
+        this.useAngularAcceleration = useAngularAcceleration;
+    }
+    public void HandleMovement(float h, float v)
+    {
+        // 각가속도/즉시회전
+        if (Mathf.Abs(h) > 0.01f)
         {
-            float turnAmount = h * rotationSpeed * Time.fixedDeltaTime;
-            Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
-            rb.MoveRotation(rb.rotation * deltaRotation);
+            if (useAngularAcceleration)
+            {
+                float targetAngular = h * maxAngularSpeed;
+                currentAngularSpeed = Mathf.MoveTowards(currentAngularSpeed, targetAngular, angularAcceleration * Time.fixedDeltaTime);
+                Quaternion deltaRotation = Quaternion.Euler(0, currentAngularSpeed * Time.fixedDeltaTime, 0);
+                rb.MoveRotation(rb.rotation * deltaRotation);
+            }
+            else
+            {
+                float turnAmount = h * maxAngularSpeed * Time.fixedDeltaTime;
+                Quaternion deltaRotation = Quaternion.Euler(0, turnAmount, 0);
+                rb.MoveRotation(rb.rotation * deltaRotation);
+            }
         }
-
+        else
+        {
+            currentAngularSpeed = Mathf.MoveTowards(currentAngularSpeed, 0f, angularAcceleration * Time.fixedDeltaTime);
+        }
+        // 가속도 적용 (이전과 동일)
         if (Mathf.Abs(v) > 0.01f)
         {
             Vector3 forward = rb.rotation * Vector3.forward;
             Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
-
             if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
             {
-                Vector3 next = rb.position + forward * v * moveSpeed * Time.fixedDeltaTime;
-                rb.MovePosition(next);
+                rb.AddForce(forward * v * acceleration, ForceMode.Acceleration);
             }
-
-            animator?.SetBool("is_walking", true);
         }
-        else
+        // 최대 속도 제한(수평만)
+        Vector3 flatVel = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+        if (flatVel.magnitude > maxSpeed)
         {
-            animator?.SetBool("is_walking", false);
+            Vector3 limited = flatVel.normalized * maxSpeed;
+            rb.velocity = new Vector3(limited.x, rb.velocity.y, limited.z);
         }
+        animator?.SetBool("is_walking", flatVel.magnitude > 0.1f);
     }
 }

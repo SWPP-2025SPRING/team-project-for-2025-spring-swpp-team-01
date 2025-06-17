@@ -93,6 +93,7 @@ public class KatydidMovement : MonoBehaviour, IRideableBug
         if (!isMounted) return;
         if (col.gameObject.CompareTag("Obstacle"))
         {
+            this.tag = "Wall"; // 다시 mount 방지
             katydidAnimator?.SetTrigger("is_dropping");
             Debug.Log("is_dropping triggered");
             var player = GetComponentInChildren<PlayerMovement>();
