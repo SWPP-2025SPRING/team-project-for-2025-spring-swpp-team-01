@@ -66,6 +66,7 @@ public class KatydidMovement : RideableBugBase
 
             if (isSuperJump)
             {
+                AudioManager.Instance?.PlayBug("Ketydid_Superjump");
                 rb.AddForce(Vector3.up * superJumpForce, ForceMode.Impulse);
                 canSuperJump = false;
                 isSuperJump = false;
@@ -74,6 +75,7 @@ public class KatydidMovement : RideableBugBase
             else
             {
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                AudioManager.Instance?.PlayBug("Ketydid_Jump");
             }
 
             lastJumpTime = Time.time;
@@ -83,6 +85,12 @@ public class KatydidMovement : RideableBugBase
 
     IEnumerator SuperJumpCooldown()
     {
+        if (!CanUseSkill())
+        {
+            Debug.Log("Skill is not available (still active or cooling down).");
+            yield break;
+        }
+
         yield return SkillWithCooldown(
             0f,
             jumpCooldown,
@@ -100,6 +108,7 @@ public class KatydidMovement : RideableBugBase
 
         if (col.gameObject.CompareTag("Obstacle"))
         {
+            AudioManager.Instance?.PlayBug("Stun");
             animator?.SetTrigger("is_dropping");
             GetComponentInChildren<PlayerMovement>()?.ForceFallFromBug();
             SetMounted(false);

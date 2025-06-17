@@ -21,6 +21,8 @@ public class PlayerMovement : MonoBehaviour
     public Quaternion mountRotButterfly   = Quaternion.identity;
     public Quaternion mountRotMoth        = Quaternion.identity;
     public Quaternion mountRotBeetle      = Quaternion.identity;
+    public float mountCooldownTime = 2f;
+    private bool mountCooldown = false;
     public float acceleration = 20f;
     public float maxSpeed = 3f;
     public float angularAcceleration = 200f;
@@ -51,7 +53,8 @@ public class PlayerMovement : MonoBehaviour
             maxSpeed,
             angularAcceleration,
             maxAngularSpeed,
-            obstacleCheckDist
+            obstacleCheckDist,
+            "Player"
         );
     }
     void Update()
@@ -61,6 +64,7 @@ public class PlayerMovement : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.E)) Unmount();
             return;
         }
+        if (mountCooldown) return;
         if (Input.GetKeyDown(KeyCode.E)) TryMount();
     }
     void FixedUpdate()
@@ -86,7 +90,7 @@ public class PlayerMovement : MonoBehaviour
         float minDist = Mathf.Infinity;
         foreach (var hit in hits)
         {
-            if (!hit.CompareTag("Bug")) continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             if (dist < minDist)
             {
@@ -94,6 +98,10 @@ public class PlayerMovement : MonoBehaviour
                 closest = hit.transform;
             }
         }
+        // if (closest && closest.TryGetComponent<RideableBugBase>(out var rideable))
+        // {
+        //     // rideable.ApproachTo(transform.position);
+        // }
     }
     void TryMount()
     {
@@ -103,7 +111,8 @@ public class PlayerMovement : MonoBehaviour
         float minDist = Mathf.Infinity;
         foreach (var hit in hits)
         {
-            if (!hit.CompareTag("Bug")) continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             if (dist < minDist)
             {
@@ -116,7 +125,7 @@ public class PlayerMovement : MonoBehaviour
             Mount(closest);
         }
     }
-    void Mount(Transform bug)
+    public void Mount(Transform bug)
     {
         isMounted = true;
         mountedBug = bug;
@@ -126,31 +135,31 @@ public class PlayerMovement : MonoBehaviour
         if (col != null) col.enabled = false;
         transform.SetParent(bug);
         string tag = bug.tag.ToLower();
-        if (tag.Contains("ant")) {
+        if (tag == "ant") {
             mountedLocalPos = mountPosAnt;
             mountedLocalRot = mountRotAnt;
-        } else if (tag.Contains("ladybug")) {
+        } else if (tag == "ladybug") {
             mountedLocalPos = mountPosLadybug;
             mountedLocalRot = mountRotLadybug;
-        } else if (tag.Contains("pillbug")) {
+        } else if (tag == "pillbug") {
             mountedLocalPos = mountPosPillbug;
             mountedLocalRot = mountRotPillbug;
-        } else if (tag.Contains("katydid")) {
+        } else if (tag == "katydid") {
             mountedLocalPos = mountPosKatydid;
             mountedLocalRot = mountRotKatydid;
-        } else if (tag.Contains("caterpillar")) {
+        } else if (tag == "caterpillar") {
             mountedLocalPos = mountPosCaterpillar;
             mountedLocalRot = mountRotCaterpillar;
-        } else if (tag.Contains("bee")) {
+        } else if (tag == "bee") {
             mountedLocalPos = mountPosBee;
             mountedLocalRot = mountRotBee;
-        } else if (tag.Contains("butterfly")) {
+        } else if (tag == "butterfly") {
             mountedLocalPos = mountPosButterfly;
             mountedLocalRot = mountRotButterfly;
-        } else if (tag.Contains("moth")) {
+        } else if (tag == "moth") {
             mountedLocalPos = mountPosMoth;
             mountedLocalRot = mountRotMoth;
-        } else if (tag.Contains("beetle")) {
+        } else if (tag == "beetle") {
             mountedLocalPos = mountPosBeetle;
             mountedLocalRot = mountRotBeetle;
         } else {
@@ -177,15 +186,15 @@ public class PlayerMovement : MonoBehaviour
         StartCoroutine(EnableColliderAfterDelay(col, 0.05f));
         animator.SetBool("is_riding_on_bug", false);
         if (mountedBug.TryGetComponent<RideableBugBase>(out var rideable))
-        {
             rideable.SetMounted(false);
-        }
         mountedBug = null;
+        StartCoroutine(MountCooldownRoutine());
     }
     IEnumerator EnableColliderAfterDelay(CapsuleCollider col, float delay)
     {
         yield return new WaitForSeconds(delay);
         if (col != null) col.enabled = true;
+        Debug.Log("[Unmount] Collider enabled after delay");
     }
     void Fall()
     {
@@ -219,5 +228,11 @@ public class PlayerMovement : MonoBehaviour
         isFalling = false;
         rb.velocity = Vector3.zero;
         Debug.Log("추락 후 복구됨");
+    }
+    IEnumerator MountCooldownRoutine()
+    {
+        mountCooldown = true;
+        yield return new WaitForSeconds(mountCooldownTime);
+        mountCooldown = false;
     }
 }

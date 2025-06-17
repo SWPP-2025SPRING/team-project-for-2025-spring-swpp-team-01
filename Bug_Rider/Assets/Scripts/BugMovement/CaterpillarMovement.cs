@@ -24,6 +24,7 @@ public class CaterpillarMovement : RideableBugBase
             acceleration, maxSpeed,
             angularAcceleration, maxAngularSpeed,
             obstacleCheckDist,
+            "Caterpillar",
             false,  // useAcceleration
             false   // useAngularAcceleration
         );
@@ -73,14 +74,19 @@ public class CaterpillarMovement : RideableBugBase
         int idx = Random.Range(0, candidates.Length);
         GameObject chosen = candidates[idx];
 
+        // 🔥 프리팹에 따라 사운드 매핑
+        string enterSoundKey = "";
+        if (chosen == mothPrefab)
+            AudioManager.Instance?.PlayObstacle("Moth_Enter");
+        else if (chosen == butterflyPrefab)
+            AudioManager.Instance?.PlayObstacle("Butterfly_Enter");
+        else if (chosen == beePrefab)
+            AudioManager.Instance?.PlayObstacle("Bee_Enter", true);
+
         GameObject newBug = Instantiate(chosen, transform.position, transform.rotation);
         if (mountedPlayer != null)
         {
-            mountedPlayer.transform.SetParent(newBug.transform);
-            mountedPlayer.transform.localPosition = new Vector3(0, -1.2f, 0);
-            mountedPlayer.transform.localRotation = Quaternion.identity;
-            mountedPlayer.isMounted = true;
-            mountedPlayer.mountedBug = newBug.transform;
+            mountedPlayer.Mount(newBug.transform);
         }
 
         Destroy(gameObject);

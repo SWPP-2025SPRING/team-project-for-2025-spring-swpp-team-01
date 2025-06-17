@@ -9,11 +9,13 @@ public abstract class RideableBugBase : MonoBehaviour
 
     public GameObject abilityUI;
     protected bool isMounted = false;
-    public float acceleration = 5f;
-    public float maxSpeed = 5f;
-    public float angularAcceleration = 600f;
-    public float maxAngularSpeed = 45f;
-    public float obstacleCheckDist = 0.8f;
+    public float acceleration = 15f;
+    public float maxSpeed = 6f;
+    public float angularAcceleration = 1200f;
+    public float maxAngularSpeed = 90f;
+    public float obstacleCheckDist = 0.0001f;
+    protected bool isSkillActive = false;
+    protected bool isSkillOnCooldown = false;
 
     protected virtual void Awake()
     {
@@ -48,18 +50,22 @@ public abstract class RideableBugBase : MonoBehaviour
         if (!col.gameObject.CompareTag("Obstacle")) return;
 
         animator?.SetTrigger("is_dropping");
+        // AudioManager.Instance?.StopBug();
+        AudioManager.Instance?.PlayBug("Stun");
         GetComponentInChildren<PlayerMovement>()?.ForceFallFromBug();
         SetMounted(false);
         Destroy(transform.root.gameObject, 2f);
     }
 
     protected IEnumerator SkillWithCooldown(
-        float activeTime,
-        float cooldownTime,
-        System.Action onSkillStart,
-        System.Action onSkillEnd)
+    float activeTime,
+    float cooldownTime,
+    System.Action onSkillStart,
+    System.Action onSkillEnd)
     {
+        isSkillActive = true;
         onSkillStart?.Invoke();
+        Debug.Log("[SkillWithCooldown] Start Invoked");
 
         float timer = activeTime;
         while (timer > 0f)
@@ -68,13 +74,23 @@ public abstract class RideableBugBase : MonoBehaviour
             yield return null;
         }
 
+        isSkillActive = false;
         onSkillEnd?.Invoke();
+        Debug.Log("[SkillWithCooldown] End Invoked");
 
+        isSkillOnCooldown = true;
         timer = cooldownTime;
         while (timer > 0f)
         {
             timer -= Time.deltaTime;
             yield return null;
         }
+        isSkillOnCooldown = false;
     }
+
+    protected bool CanUseSkill()
+    {
+        return !isSkillActive && !isSkillOnCooldown;
+    }
+
 }

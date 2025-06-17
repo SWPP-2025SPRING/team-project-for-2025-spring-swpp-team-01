@@ -20,13 +20,15 @@ public class BeetleMovement : RideableBugBase
             rb, animator, obstacleMask,
             acceleration, maxSpeed,
             angularAcceleration, maxAngularSpeed,
-            obstacleCheckDist
+            obstacleCheckDist,
+            "Beetle"
         );
 
         flyStrategy = new FlyMovementStrategy(
             rb, animator,
             maxSpeed, maxAngularSpeed,
-            flyMaxHeight
+            flyMaxHeight,
+            "Beetle"
         );
     }
 
@@ -54,6 +56,12 @@ public class BeetleMovement : RideableBugBase
 
     IEnumerator StartFlight()
     {
+        if (!CanUseSkill())
+        {
+            Debug.Log("Skill is not available (still active or cooling down).");
+            yield break;
+        }
+
         flyStrategy.SetFlying(true);
 
         yield return SkillWithCooldown(
@@ -68,7 +76,11 @@ public class BeetleMovement : RideableBugBase
     {
         base.SetMounted(mounted);
 
-        if (!mounted)
+        if (mounted)
+        {
+            AudioManager.Instance?.PlayBug("Beetle_Enter");
+        }
+        else
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
@@ -81,6 +93,7 @@ public class BeetleMovement : RideableBugBase
 
         if (col.gameObject.CompareTag("Obstacle"))
         {
+            AudioManager.Instance?.PlayBug("Beetle_Collide");
             Destroy(col.gameObject);
         }
     }

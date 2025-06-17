@@ -2,34 +2,37 @@ using UnityEngine;
 public class FlyMovementStrategy
 {
     readonly Rigidbody rb;
-    readonly Animator  animator;
-    readonly float     baseFlySpeed;
-    readonly float     flyRotationSpeed;
-    readonly float     maxHeight;
-    readonly float     ascendForce;
-    bool  isFlying;
+    readonly Animator animator;
+    readonly float baseFlySpeed;
+    readonly float flyRotationSpeed;
+    readonly float maxHeight;
+    readonly float ascendForce;
+    bool isFlying;
     float flightTimer;
     float initialY;
-    public bool  IsFlying   => isFlying;
+    public bool IsFlying => isFlying;
     public float FlightTime => flightTimer;
+    private string bugName;  // ✅ 추가됨
+
     public FlyMovementStrategy(
         Rigidbody rb,
-        Animator  animator,
+        Animator animator,
         float flySpeed,
         float flyRotationSpeed,
         float maxHeight,
+        string bugName, // ✅ 추가됨
         float ascendForce = 18f)
     {
-        this.rb               = rb;
-        this.animator         = animator;
-        this.baseFlySpeed     = flySpeed;
+        this.rb = rb;
+        this.animator = animator;
+        this.baseFlySpeed = flySpeed;
         this.flyRotationSpeed = flyRotationSpeed;
-        this.maxHeight        = maxHeight;
-        this.ascendForce      = ascendForce;
+        this.maxHeight = maxHeight;
+        this.ascendForce = ascendForce;
+        this.bugName = bugName;
     }
     public void SetFlying(bool value)
     {
-        Debug.Log("SetFlying " + value);
         if (value)
         {
             isFlying = true;
@@ -37,13 +40,14 @@ public class FlyMovementStrategy
             initialY = rb.position.y;
             animator?.ResetTrigger("is_drop");           // 추가
             animator?.SetBool("is_flying", true);
-            Debug.Log("is_flying true!");
+            AudioManager.Instance?.PlayBug($"{bugName}_Fly");
         }
         else
         {
             isFlying = false;
             animator?.SetBool("is_flying", false);
             animator?.SetTrigger("is_drop");
+            AudioManager.Instance?.StopBug();
         }
     }
     public void HandleMovement(float h, float v, bool isSpace)
@@ -51,7 +55,7 @@ public class FlyMovementStrategy
         if (!isFlying) return;
         flightTimer += Time.fixedDeltaTime;
         float speedFactor = flightTimer < 1f ? 0.5f : 1f;
-        float forceFactor = flightTimer < 1f ? 1f   : 1f;
+        float forceFactor = flightTimer < 1f ? 1f : 1f;
         /* 회전만 수행 */
         if (Mathf.Abs(h) > 0.01f)
         {

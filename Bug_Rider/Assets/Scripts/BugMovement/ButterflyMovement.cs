@@ -8,24 +8,32 @@ public class ButterflyMovement : RideableBugBase
     public float flyTimeLimit = 5f;
     public float skillCooldown = 7f;
     public LayerMask obstacleMask;
-
+    private WalkMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
 
     protected override void Awake()
     {
         base.Awake();
 
+        walkStrategy = new WalkMovementStrategy(
+                            rb, animator, obstacleMask,
+                            acceleration, maxSpeed,
+                            angularAcceleration, maxAngularSpeed,
+                            obstacleCheckDist,
+                            "Butterfly"
+                        );
+
         flyStrategy = new FlyMovementStrategy(
             rb, animator,
             maxSpeed, maxAngularSpeed,
-            flyMaxHeight
+            flyMaxHeight,
+            "Butterfly"
         );
     }
 
     void Update()
     {
         if (!isMounted) return;
-
         if (Input.GetKeyDown(KeyCode.Space))
             StartCoroutine(StartFlight());
     }
@@ -39,17 +47,19 @@ public class ButterflyMovement : RideableBugBase
         bool s = Input.GetKey(KeyCode.Space);
 
         if (flyStrategy.IsFlying)
-        {
             flyStrategy.HandleMovement(h, v, s);
-        }
         else
-        {
-            // 기본 걸어다니는 전략이 없으므로 여기선 이동X (Butterfly는 비행 기반)
-        }
+            walkStrategy.HandleMovement(h, v);
     }
 
     IEnumerator StartFlight()
     {
+        if (!CanUseSkill())
+        {
+            Debug.Log("Skill is not available (still active or cooling down).");
+            yield break;
+        }
+
         flyStrategy.SetFlying(true);
 
         yield return SkillWithCooldown(
@@ -68,6 +78,10 @@ public class ButterflyMovement : RideableBugBase
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
+            AudioManager.Instance?.StopObstacle(); // Turn off _Enter sound
         }
+        // else // Mount되자마자 자동 비행 시작
+        //     StartCoroutine(StartFlight());
+        
     }
 }

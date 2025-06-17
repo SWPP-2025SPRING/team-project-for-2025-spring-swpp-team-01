@@ -24,7 +24,8 @@ public class AntMovement : RideableBugBase
             maxSpeed,
             angularAcceleration,
             maxAngularSpeed,
-            obstacleCheckDist
+            obstacleCheckDist,
+            "Ant"
         );
     }
 
@@ -48,8 +49,15 @@ public class AntMovement : RideableBugBase
 
     IEnumerator Dash()
     {
+        if (!CanUseSkill())
+        {
+            Debug.Log("Skill is not available (still active or cooling down).");
+            yield break;
+        }
+
         dashDir = rb.rotation * Vector3.forward;
         isDashing = true;
+        AudioManager.Instance.PlayBug("Ant_Dash");
 
         yield return SkillWithCooldown(
             dashDuration,

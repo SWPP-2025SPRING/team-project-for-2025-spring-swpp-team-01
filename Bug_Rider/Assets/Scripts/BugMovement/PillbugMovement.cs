@@ -54,10 +54,19 @@ public class PillbugMovement : RideableBugBase
         if (!mounted)
         {
             animator.SetBool("is_rolling", false);
+            AudioManager.Instance?.StopBug();  // 롤 소리 정지
         }
         else
         {
             animator.SetBool("is_rolling", true);
+            AudioManager.Instance?.PlayBug("Pillbug_Roll", true);  // 롤 소리 재생
         }
+    }
+    protected override void OnCollisionEnter(Collision col)
+    {
+        if (!isMounted) return;
+        if (!col.gameObject.CompareTag("Wall")) return;
+
+        AudioManager.Instance?.PlayBug("Pillbug_Stun");  // Pillbug 전용 사운드
     }
 }

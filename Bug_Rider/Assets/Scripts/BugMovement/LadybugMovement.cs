@@ -20,10 +20,11 @@ public class LadybugMovement : RideableBugBase
             rb, animator, obstacleMask,
             acceleration, maxSpeed,
             angularAcceleration, maxAngularSpeed,
-            obstacleCheckDist
+            obstacleCheckDist,
+            "Ladybug"
         );
 
-        flyStrategy = new FlyMovementStrategy(rb, animator, maxSpeed, maxAngularSpeed, flyMaxHeight);
+        flyStrategy = new FlyMovementStrategy(rb, animator, maxSpeed, maxAngularSpeed, flyMaxHeight, "Ladybug");
     }
 
     void Update()
@@ -49,6 +50,12 @@ public class LadybugMovement : RideableBugBase
 
     IEnumerator StartFlight()
     {
+        if (!CanUseSkill())
+        {
+            Debug.Log("Skill is not available (still active or cooling down).");
+            yield break;
+        }
+
         flyStrategy.SetFlying(true);
 
         yield return SkillWithCooldown(
