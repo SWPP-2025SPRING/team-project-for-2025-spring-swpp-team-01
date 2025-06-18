@@ -64,12 +64,14 @@ public class BeetleMovement : RideableBugBase
 
         flyStrategy.SetFlying(true);
 
-        yield return SkillWithCooldown(
-            flyTimeLimit,
-            skillCooldown,
-            null,
-            () => flyStrategy.SetFlying(false)
-        );
+        yield return new WaitForSeconds(flyTimeLimit);
+
+        flyStrategy.SetFlying(false);
+        
+        // 자동 착지 및 언마운트
+        animator?.SetTrigger("is_dropping");
+        GetComponentInChildren<PlayerMovement>()?.ForceFallFromBug();
+        SetMounted(false); 
     }
 
     public override void SetMounted(bool mounted)
@@ -78,12 +80,14 @@ public class BeetleMovement : RideableBugBase
 
         if (mounted)
         {
-            AudioManager.Instance?.PlayBug("Beetle_Enter");
+            AudioManager.Instance?.PlayObstacle("Beetle_Enter");
         }
         else
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
+            AudioManager.Instance?.StopObstacle();
+            Destroy(transform.root.gameObject, 2f);
         }
     }
 
@@ -97,5 +101,4 @@ public class BeetleMovement : RideableBugBase
             Destroy(col.gameObject);
         }
     }
-
 }
