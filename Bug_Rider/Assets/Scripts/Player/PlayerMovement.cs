@@ -2,6 +2,27 @@ using UnityEngine;
 using System.Collections;
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Mount Positions")]
+    public Vector3 mountPosAnt         = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosLadybug     = new Vector3(0, -0.2f, 0.5f);
+    public Vector3 mountPosPillbug     = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosKatydid     = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosCaterpillar = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosBee         = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosButterfly   = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosMoth        = new Vector3(0, -1.2f, 0);
+    public Vector3 mountPosBeetle      = new Vector3(0, -1.2f, 0);
+    public Quaternion mountRotAnt         = Quaternion.identity;
+    public Quaternion mountRotLadybug     = Quaternion.identity;
+    public Quaternion mountRotPillbug     = Quaternion.identity;
+    public Quaternion mountRotKatydid     = Quaternion.identity;
+    public Quaternion mountRotCaterpillar = Quaternion.identity;
+    public Quaternion mountRotBee         = Quaternion.identity;
+    public Quaternion mountRotButterfly   = Quaternion.identity;
+    public Quaternion mountRotMoth        = Quaternion.identity;
+    public Quaternion mountRotBeetle      = Quaternion.identity;
+    public float mountCooldownTime = 2f;
+    private bool mountCooldown = false;
     public float acceleration = 20f;
     public float maxSpeed = 3f;
     public float angularAcceleration = 200f;
@@ -32,17 +53,18 @@ public class PlayerMovement : MonoBehaviour
             maxSpeed,
             angularAcceleration,
             maxAngularSpeed,
-            obstacleCheckDist
+            obstacleCheckDist,
+            "Player"
         );
     }
     void Update()
     {
-        // 탑승 중이면 이동·회전·힘 적용 모두 중지 (벌레 오브젝트가 조종)
         if (isMounted)
         {
             if (Input.GetKeyDown(KeyCode.E)) Unmount();
             return;
         }
+        if (mountCooldown) return;
         if (Input.GetKeyDown(KeyCode.E)) TryMount();
     }
     void FixedUpdate()
@@ -68,7 +90,7 @@ public class PlayerMovement : MonoBehaviour
         float minDist = Mathf.Infinity;
         foreach (var hit in hits)
         {
-            if (!hit.CompareTag("Bug")) continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             if (dist < minDist)
             {
@@ -76,10 +98,10 @@ public class PlayerMovement : MonoBehaviour
                 closest = hit.transform;
             }
         }
-        if (closest && closest.TryGetComponent<IRideableBug>(out var rideable))
-        {
-            rideable.ApproachTo(transform.position);
-        }
+        // if (closest && closest.TryGetComponent<RideableBugBase>(out var rideable))
+        // {
+        //     // rideable.ApproachTo(transform.position);
+        // }
     }
     void TryMount()
     {
@@ -89,7 +111,8 @@ public class PlayerMovement : MonoBehaviour
         float minDist = Mathf.Infinity;
         foreach (var hit in hits)
         {
-            if (!hit.CompareTag("Bug")) continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
+            if (LayerMask.LayerToName(hit.gameObject.layer) != "Bug") continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             if (dist < minDist)
             {
@@ -102,7 +125,7 @@ public class PlayerMovement : MonoBehaviour
             Mount(closest);
         }
     }
-    void Mount(Transform bug)
+    public void Mount(Transform bug)
     {
         isMounted = true;
         mountedBug = bug;
@@ -111,16 +134,43 @@ public class PlayerMovement : MonoBehaviour
         var col = GetComponent<CapsuleCollider>();
         if (col != null) col.enabled = false;
         transform.SetParent(bug);
-        if (bug.TryGetComponent<LadybugMovement>(out _))
-            mountedLocalPos = new Vector3(0, -0.2f, 0.5f);
-        else
+        string tag = bug.tag.ToLower();
+        if (tag == "ant") {
+            mountedLocalPos = mountPosAnt;
+            mountedLocalRot = mountRotAnt;
+        } else if (tag == "ladybug") {
+            mountedLocalPos = mountPosLadybug;
+            mountedLocalRot = mountRotLadybug;
+        } else if (tag == "pillbug") {
+            mountedLocalPos = mountPosPillbug;
+            mountedLocalRot = mountRotPillbug;
+        } else if (tag == "katydid") {
+            mountedLocalPos = mountPosKatydid;
+            mountedLocalRot = mountRotKatydid;
+        } else if (tag == "caterpillar") {
+            mountedLocalPos = mountPosCaterpillar;
+            mountedLocalRot = mountRotCaterpillar;
+        } else if (tag == "bee") {
+            mountedLocalPos = mountPosBee;
+            mountedLocalRot = mountRotBee;
+        } else if (tag == "butterfly") {
+            mountedLocalPos = mountPosButterfly;
+            mountedLocalRot = mountRotButterfly;
+        } else if (tag == "moth") {
+            mountedLocalPos = mountPosMoth;
+            mountedLocalRot = mountRotMoth;
+        } else if (tag == "beetle") {
+            mountedLocalPos = mountPosBeetle;
+            mountedLocalRot = mountRotBeetle;
+        } else {
             mountedLocalPos = new Vector3(0, -1.2f, 0);
-        mountedLocalRot = Quaternion.identity;
+            mountedLocalRot = Quaternion.identity;
+        }
         transform.localPosition = mountedLocalPos;
         transform.localRotation = mountedLocalRot;
         animator.SetTrigger("is_riding");
         animator.SetBool("is_riding_on_bug", true);
-        if (bug.TryGetComponent<IRideableBug>(out var rideable))
+        if (bug.TryGetComponent<RideableBugBase>(out var rideable))
             rideable.SetMounted(true);
     }
     public void Unmount()
@@ -135,9 +185,10 @@ public class PlayerMovement : MonoBehaviour
         if (col != null) col.enabled = false;
         StartCoroutine(EnableColliderAfterDelay(col, 0.05f));
         animator.SetBool("is_riding_on_bug", false);
-        if (mountedBug.TryGetComponent<IRideableBug>(out var rideable))
+        if (mountedBug.TryGetComponent<RideableBugBase>(out var rideable))
             rideable.SetMounted(false);
         mountedBug = null;
+        StartCoroutine(MountCooldownRoutine());
     }
     IEnumerator EnableColliderAfterDelay(CapsuleCollider col, float delay)
     {
@@ -165,7 +216,6 @@ public class PlayerMovement : MonoBehaviour
         float fallSpeed = -10f;
         float elapsed = 0f;
         animator.SetTrigger("is_falling");
-        // 낙하시 수직속도만 직접 제어(물리엔진 우선)
         while (elapsed < fallDuration)
         {
             elapsed += Time.deltaTime;
@@ -178,5 +228,11 @@ public class PlayerMovement : MonoBehaviour
         isFalling = false;
         rb.velocity = Vector3.zero;
         Debug.Log("추락 후 복구됨");
+    }
+    IEnumerator MountCooldownRoutine()
+    {
+        mountCooldown = true;
+        yield return new WaitForSeconds(mountCooldownTime);
+        mountCooldown = false;
     }
 }

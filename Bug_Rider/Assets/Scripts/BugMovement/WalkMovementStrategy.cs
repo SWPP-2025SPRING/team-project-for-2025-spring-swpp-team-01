@@ -9,8 +9,14 @@ public class WalkMovementStrategy
     private float angularAcceleration;
     private float maxAngularSpeed;
     private float obstacleCheckDist;
+    private bool useAcceleration;
     private bool useAngularAcceleration;
     private float currentAngularSpeed = 0f;
+
+    private string bugName;  // ✅ 추가됨
+    private bool isWalkingSoundPlaying = false;
+
+
     public WalkMovementStrategy(
         Rigidbody rb,
         Animator animator,
@@ -20,6 +26,8 @@ public class WalkMovementStrategy
         float angularAcceleration,
         float maxAngularSpeed,
         float obstacleCheckDist,
+        string bugName, // ✅ 추가됨
+        bool useAcceleration = true,
         bool useAngularAcceleration = false
     )
     {
@@ -31,8 +39,11 @@ public class WalkMovementStrategy
         this.angularAcceleration = angularAcceleration;
         this.maxAngularSpeed = maxAngularSpeed;
         this.obstacleCheckDist = obstacleCheckDist;
+        this.bugName = bugName;
+        this.useAcceleration = useAcceleration;
         this.useAngularAcceleration = useAngularAcceleration;
     }
+
     public void HandleMovement(float h, float v)
     {
         // 각가속도/즉시회전
@@ -63,7 +74,16 @@ public class WalkMovementStrategy
             Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
             if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
             {
-                rb.AddForce(forward * v * acceleration, ForceMode.Acceleration);
+                if (useAcceleration)
+                {
+                    rb.AddForce(forward * v * acceleration, ForceMode.Acceleration);
+                }
+                else
+                {
+                    Vector3 targetVelocity = forward * v * maxSpeed;
+                    Vector3 velocityChange = targetVelocity - new Vector3(rb.velocity.x, 0, rb.velocity.z);
+                    rb.AddForce(velocityChange, ForceMode.VelocityChange);
+                }
             }
         }
         // 최대 속도 제한(수평만)
@@ -73,6 +93,32 @@ public class WalkMovementStrategy
             Vector3 limited = flatVel.normalized * maxSpeed;
             rb.velocity = new Vector3(limited.x, rb.velocity.y, limited.z);
         }
-        animator?.SetBool("is_walking", flatVel.magnitude > 0.1f);
+        // animator?.SetBool("is_walking", flatVel.magnitude > 0.1f);
+        // if (flatVel.magnitude > 0.1f && bugName != "Player")
+        //     AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
+        // else if(bugName != "Player") AudioManager.Instance?.StopBug();
+        bool isWalking = flatVel.magnitude > 0.1f;
+        animator?.SetBool("is_walking", isWalking);
+
+        if (bugName != "Player")
+        {
+            if (isWalking)
+            {
+                if (!isWalkingSoundPlaying)
+                {
+                    AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
+                    isWalkingSoundPlaying = true;
+                }
+            }
+            else
+            {
+                if (isWalkingSoundPlaying)
+                {
+                    AudioManager.Instance?.StopBug();
+                    isWalkingSoundPlaying = false;
+                }
+            }
+        }
+
     }
 }

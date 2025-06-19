@@ -7,9 +7,10 @@ public class RespawnTriggerPoint : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") || other.gameObject.layer == LayerMask.NameToLayer("Bug"))
         {
             manager.SetRespawnIndex(index);
+            Debug.Log(index);
         }
     }
 }
