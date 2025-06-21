@@ -12,11 +12,8 @@ public class WalkMovementStrategy
     private bool useAcceleration;
     private bool useAngularAcceleration;
     private float currentAngularSpeed = 0f;
-
-    private string bugName;  // ✅ 추가됨
+    private string bugName;  // :흰색_확인_표시: 추가됨
     private bool isWalkingSoundPlaying = false;
-
-
     public WalkMovementStrategy(
         Rigidbody rb,
         Animator animator,
@@ -26,7 +23,7 @@ public class WalkMovementStrategy
         float angularAcceleration,
         float maxAngularSpeed,
         float obstacleCheckDist,
-        string bugName, // ✅ 추가됨
+        string bugName, // :흰색_확인_표시: 추가됨
         bool useAcceleration = true,
         bool useAngularAcceleration = false
     )
@@ -42,8 +39,11 @@ public class WalkMovementStrategy
         this.bugName = bugName;
         this.useAcceleration = useAcceleration;
         this.useAngularAcceleration = useAngularAcceleration;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX
+                        | RigidbodyConstraints.FreezeRotationY
+                        | RigidbodyConstraints.FreezeRotationZ;
+        rb.centerOfMass = new Vector3(0, -1.0f, 0);
     }
-
     public void HandleMovement(float h, float v)
     {
         // 각가속도/즉시회전
@@ -86,23 +86,18 @@ public class WalkMovementStrategy
                 }
             }
         }
-        // 최대 속도 제한(수평만)
-        Vector3 flatVel = new Vector3(rb.velocity.x, 0, rb.velocity.z);
-        if (flatVel.magnitude > maxSpeed)
+        // 최대 속도 제한
+        if (rb.velocity.magnitude > maxSpeed)
         {
-            Vector3 limited = flatVel.normalized * maxSpeed;
-            rb.velocity = new Vector3(limited.x, rb.velocity.y, limited.z);
+            rb.velocity = rb.velocity.normalized * maxSpeed;
         }
         // animator?.SetBool("is_walking", flatVel.magnitude > 0.1f);
         // if (flatVel.magnitude > 0.1f && bugName != "Player")
         //     AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
         // else if(bugName != "Player") AudioManager.Instance?.StopBug();
-        bool isWalking = flatVel.magnitude > 0.1f;
+        bool isWalking = rb.velocity.magnitude > 0.1f;
         animator?.SetBool("is_walking", isWalking);
-
-        if (bugName != "Player")
-        {
-            if (isWalking)
+        if (isWalking)
             {
                 if (!isWalkingSoundPlaying)
                 {
@@ -110,15 +105,24 @@ public class WalkMovementStrategy
                     isWalkingSoundPlaying = true;
                 }
             }
-            else
-            {
-                if (isWalkingSoundPlaying)
-                {
-                    AudioManager.Instance?.StopBug();
-                    isWalkingSoundPlaying = false;
-                }
-            }
-        }
-
+        // if (bugName != "Player")
+        // {
+        //     if (isWalking)
+        //     {
+        //         if (!isWalkingSoundPlaying)
+        //         {
+        //             AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
+        //             isWalkingSoundPlaying = true;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (isWalkingSoundPlaying)
+        //         {
+        //             AudioManager.Instance?.StopBug();
+        //             isWalkingSoundPlaying = false;
+        //         }
+        //     }
+        // }
     }
 }
