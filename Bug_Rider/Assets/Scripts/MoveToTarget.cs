@@ -19,7 +19,7 @@ public class MoveToTarget : MonoBehaviour
     private float currentFreq;
     private float targetFreq;
     private float changeTimer;
-    public void Initialize(Vector3 targetPos, float moveSpeed)
+    public void Initialize(Vector3 targetPos, float moveSpeed, float delay)
     {
         targetPosition = targetPos;
         speed = moveSpeed;
@@ -33,7 +33,7 @@ public class MoveToTarget : MonoBehaviour
         currentFreq = targetFreq;
         changeTimer = changeInterval;
         // :별: 자동 파괴 예약
-        selfDestructRoutine = StartCoroutine(SelfDestructIfNotMounted(10f));
+        selfDestructRoutine = StartCoroutine(SelfDestructIfNotMounted(delay));
     }
     private IEnumerator SelfDestructIfNotMounted(float delay)
     {

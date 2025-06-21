@@ -8,9 +8,16 @@ public class LadybugMovement : RideableBugBase
     public float flyTimeLimit = 20f;
     public float skillCooldown = 7f;
     public LayerMask obstacleMask;
+    private bool canFly = true;
+
 
     private WalkMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
+
+    [Header("Fly UI Sprites")]
+    public Sprite flyReadySprite;
+    public Sprite flyActiveSprite;
+    public Sprite flyCooldownSprite;
 
     protected override void Awake()
     {
@@ -30,9 +37,10 @@ public class LadybugMovement : RideableBugBase
     void Update()
     {
         if (!isMounted) return;
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (canFly && Input.GetKeyDown(KeyCode.Space))
             StartCoroutine(StartFlight());
     }
+
 
     void FixedUpdate()
     {
@@ -55,24 +63,33 @@ public class LadybugMovement : RideableBugBase
             Debug.Log("Skill is not available (still active or cooling down).");
             yield break;
         }
-
         flyStrategy.SetFlying(true);
 
         yield return SkillWithCooldown(
             flyTimeLimit,
             skillCooldown,
-            null,
-            () => flyStrategy.SetFlying(false)
+            () => UIManager.Instance.ShowSkillActive(flyActiveSprite),
+            () => {
+                flyStrategy.SetFlying(false);
+                UIManager.Instance.ShowSkillCooldown(flyCooldownSprite);
+            }
         );
+
+        UIManager.Instance.HideAllSkillUI();
     }
+
 
     public override void SetMounted(bool mounted)
     {
         base.SetMounted(mounted);
-        if (!mounted)
+
+        if (mounted)
+            UIManager.Instance.ShowSkillAvailable(flyReadySprite);
+        else
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
+            UIManager.Instance.HideAllSkillUI();
         }
     }
 }

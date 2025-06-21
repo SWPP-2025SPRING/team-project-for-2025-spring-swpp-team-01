@@ -3,6 +3,8 @@ using System.Collections;
 public class RespawnManager : MonoBehaviour
 {
     public Transform[] respawnPoints;
+    public Vector3[] respawnLocations;
+    public Vector3[] respawnRotations;
     private int currentRespawnIndex = 0;
     private bool reachedLastPoint = false;
     private GameObject player;
@@ -25,7 +27,7 @@ public class RespawnManager : MonoBehaviour
             if (trigger == null)
                 trigger = point.gameObject.AddComponent<RespawnTriggerPoint>();
             trigger.manager = this;
-            trigger.index = i+1;
+            trigger.index = i;
             var col = point.GetComponent<BoxCollider>();
             if (col == null) col = point.gameObject.AddComponent<BoxCollider>();
             col.isTrigger = true;
@@ -80,7 +82,7 @@ public class RespawnManager : MonoBehaviour
         if (true)
         {
             currentRespawnIndex = index;
-            if (index >= respawnPoints.Length)
+            if (index == respawnPoints.Length - 1)
             {
                 reachedLastPoint = true;
                 Debug.Log("Reached last respawn point.");
@@ -158,32 +160,8 @@ public class RespawnManager : MonoBehaviour
     // 인덱스별 하드코딩 월드 위치·회전
     private void GetWorldTransform(int idx, out Vector3 pos, out Quaternion rot)
     {
-        switch (idx)
-        {
-            case 1:
-                pos = new Vector3(-70.5f, -0.3f, 30.3f);
-                rot = Quaternion.Euler(0f, 90f, 0f);
-                break;
-            case 2:
-                pos = new Vector3(44.1f, 5.58f, 28.11f);
-                rot = Quaternion.Euler(0f, 180f, 0f);
-                break;
-            case 3:
-                pos = new Vector3(31f, -0.37f, -66.1f);
-                rot = Quaternion.Euler(0f, 270f, 0f);
-                break;
-            // 필요한 인덱스만큼 case 를 추가하세요
-            default:
-                // fallback: 첫 리스폰 포인트 월드 좌표
-                pos = respawnPoints.Length > 0
-                    ? respawnPoints[0].position + Vector3.up * 0.1f
-                    : Vector3.zero;
-                rot = respawnPoints.Length > 0
-                    ? respawnPoints[0].rotation
-                    : Quaternion.identity;
-                Debug.LogWarning("Unknown respawn index. Using fallback world transform.");
-                break;
-        }
+        pos = respawnLocations[idx];
+        rot = Quaternion.Euler(respawnRotations[idx]);
     }
     // 연기 위치 갱신 (월드 기준)
     private void UpdateSmoke(Transform playerTf)

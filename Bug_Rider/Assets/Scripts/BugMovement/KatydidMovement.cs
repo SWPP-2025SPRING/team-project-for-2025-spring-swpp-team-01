@@ -18,6 +18,11 @@ public class KatydidMovement : RideableBugBase
 
     private Coroutine cooldownRoutine;
 
+    [Header("Jump UI Sprites")]
+    public Sprite jumpReadySprite;
+    public Sprite jumpActiveSprite;
+    public Sprite jumpCooldownSprite;
+
     protected override void Awake()
     {
         base.Awake();
@@ -85,22 +90,26 @@ public class KatydidMovement : RideableBugBase
 
     IEnumerator SuperJumpCooldown()
     {
+
         if (!CanUseSkill())
         {
             Debug.Log("Skill is not available (still active or cooling down).");
             yield break;
         }
+        
+        // 준비 UI는 이미 떴으므로 생략
+        UIManager.Instance.ShowSkillActive(jumpActiveSprite);
 
         yield return SkillWithCooldown(
             0f,
             jumpCooldown,
             null,
-            null
+            () => UIManager.Instance.ShowSkillCooldown(jumpCooldownSprite)
         );
+
+        UIManager.Instance.HideAllSkillUI();
         canSuperJump = true;
     }
-
-
 
     protected override void OnCollisionEnter(Collision col)
     {
@@ -128,10 +137,15 @@ public class KatydidMovement : RideableBugBase
         {
             isGrounded = false;
             if (cooldownRoutine != null) StopCoroutine(cooldownRoutine);
+            UIManager.Instance.HideAllSkillUI();
         }
         else
         {
+            animator?.SetBool("is_walking", false);
             isGrounded = true;
+            if (canSuperJump)
+                UIManager.Instance.ShowSkillAvailable(jumpReadySprite);
         }
     }
 }
+

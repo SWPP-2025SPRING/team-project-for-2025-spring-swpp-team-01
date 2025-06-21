@@ -49,6 +49,13 @@ public class AudioManager : MonoBehaviour
         }
     }
 
+    void Start()
+    {
+        Debug.Log("Starting BGM");
+        PlayBGM("Stage1");
+    }
+
+
     private void InitDictionary()
     {
         audioDict = new Dictionary<string, AudioConfig>();
@@ -76,7 +83,7 @@ public class AudioManager : MonoBehaviour
         bgmSource.time = config.startTime;
         bgmSource.volume = 0f;
         bgmSource.Play();
-
+        Debug.Log("PlayedBGM");
         bgmFadeCoroutine = StartCoroutine(FadeIn(bgmSource, config.volume, bgmFadeDuration));
     }
 
@@ -98,11 +105,14 @@ public class AudioManager : MonoBehaviour
         if (bugCoroutine != null)
             StopCoroutine(bugCoroutine);
 
+        Debug.Log("[AudioManager] PlayBug: " + key);
         bugCoroutine = StartCoroutine(PlaySoundCoroutine(bugSource, config, loop));
     }
 
     public void StopBug()
     {
+        Debug.Log("[AudioManager] StopBug");
+
         if (bugCoroutine != null)
             StopCoroutine(bugCoroutine);
         StartCoroutine(FadeOutAndStop(bugSource, fadeOutTime));
@@ -163,6 +173,8 @@ public class AudioManager : MonoBehaviour
     private IEnumerator FadeIn(AudioSource source, float targetVolume, float duration)
     {
         float t = 0f;
+        source.volume = 0.1f;  
+
         while (t < duration)
         {
             t += Time.deltaTime;

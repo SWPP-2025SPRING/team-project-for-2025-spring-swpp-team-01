@@ -12,6 +12,10 @@ public class AntMovement : RideableBugBase
     public LayerMask obstacleMask;
     private Vector3 dashDir;
 
+    public Sprite dashReadySprite;
+    public Sprite dashActiveSprite;
+    public Sprite dashCooldownSprite;
+
     protected override void Awake()
     {
         base.Awake();
@@ -27,6 +31,16 @@ public class AntMovement : RideableBugBase
             obstacleCheckDist,
             "Ant"
         );
+    }
+
+    public override void SetMounted(bool mounted)
+    {
+        base.SetMounted(mounted);
+
+        if (mounted)
+            UIManager.Instance.ShowSkillAvailable(dashReadySprite);
+        else
+            UIManager.Instance.HideAllSkillUI();
     }
 
     void Update()
@@ -62,8 +76,15 @@ public class AntMovement : RideableBugBase
         yield return SkillWithCooldown(
             dashDuration,
             dashCooldown,
-            () => animator?.SetTrigger("is_dashing"),
-            () => isDashing = false
+            () => {
+                animator?.SetTrigger("is_dashing");
+                UIManager.Instance.ShowSkillActive(dashActiveSprite);
+            },
+            () => {
+                isDashing = false;
+                UIManager.Instance.ShowSkillCooldown(dashCooldownSprite);
+            }
         );
+
+        UIManager.Instance.HideAllSkillUI(); 
     }
-}
