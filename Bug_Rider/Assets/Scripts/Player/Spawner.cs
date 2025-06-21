@@ -23,7 +23,6 @@ public class Spawner : MonoBehaviour
             if (targetPoint == null)
                 Debug.LogWarning("Spawner: TargetPoint not found under " + name);
         }
-
         if (spawnPoint == null)
         {
             spawnPoint = FindChildByName(transform, "SpawnPoint");
@@ -31,7 +30,6 @@ public class Spawner : MonoBehaviour
                 Debug.LogWarning("Spawner: SpawnPoint not found under " + name);
         }
     }
-
     Transform FindChildByName(Transform parent, string targetName)
     {
         foreach (Transform child in parent.GetComponentsInChildren<Transform>(true))
@@ -41,7 +39,6 @@ public class Spawner : MonoBehaviour
         }
         return null;
     }
-
     void Start()
     {
         StartCoroutine(SpawnLoop());

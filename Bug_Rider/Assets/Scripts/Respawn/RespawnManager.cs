@@ -77,6 +77,22 @@ public class RespawnManager : MonoBehaviour
             Destroy(other.gameObject);
         }
     }
+
+    public void RespawnByContext() // Same as OnTriggerEnter(), written again for Restart
+    {
+        bool isRiding = animator != null && animator.GetBool("is_riding_on_bug");
+
+        if (isRiding)
+        {
+            RespawnPlayerFromObject(player);
+        }
+        else
+        {
+            RespawnPlayer();
+        }
+    }
+
+
     public void SetRespawnIndex(int index)
     {
         if (true)
