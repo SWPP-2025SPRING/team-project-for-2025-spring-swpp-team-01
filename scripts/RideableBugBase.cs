@@ -57,15 +57,6 @@ public abstract class RideableBugBase : MonoBehaviour
         Destroy(transform.root.gameObject, 2f);
     }
 
-    protected virtual void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("ForceFall"))
-        {
-            GetComponentInChildren<PlayerMovement>()?.Unmount();
-            Destroy(transform.root.gameObject, 1f);
-        }
-    }
-
     protected IEnumerator SkillWithCooldown(
         float activeTime,
         float cooldownTime,
@@ -91,7 +82,7 @@ public abstract class RideableBugBase : MonoBehaviour
         timer = cooldownTime;
         while (timer > 0f)
         {
-            UIManager.Instance.UpdateSkillCooldownTime(timer); 
+            UIManager.Instance.UpdateSkillCooldownTime(timer);  
             timer -= Time.deltaTime;
             yield return null;
         }
@@ -102,4 +93,5 @@ public abstract class RideableBugBase : MonoBehaviour
     {
         return !isSkillActive && !isSkillOnCooldown;
     }
+
 }

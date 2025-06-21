@@ -141,11 +141,9 @@ public class KatydidMovement : RideableBugBase
         }
         else
         {
-            animator?.SetBool("is_walking", false);
             isGrounded = true;
             if (canSuperJump)
                 UIManager.Instance.ShowSkillAvailable(jumpReadySprite);
         }
     }
 }
-

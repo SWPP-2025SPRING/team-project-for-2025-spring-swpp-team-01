@@ -2,14 +2,22 @@ using UnityEngine;
 using TMPro;
 using System.Collections;
 
-public class BeeMovement : RideableBugBase
+public class LadybugMovement : RideableBugBase
 {
     public float flyMaxHeight = 50f;
-    public float flyTimeLimit = 5f;
+    public float flyTimeLimit = 20f;
     public float skillCooldown = 7f;
     public LayerMask obstacleMask;
+    private bool canFly = true;
+
+
     private WalkMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
+
+    [Header("Fly UI Sprites")]
+    public Sprite flyReadySprite;
+    public Sprite flyActiveSprite;
+    public Sprite flyCooldownSprite;
 
     protected override void Awake()
     {
@@ -20,23 +28,19 @@ public class BeeMovement : RideableBugBase
             acceleration, maxSpeed,
             angularAcceleration, maxAngularSpeed,
             obstacleCheckDist,
-            "Bee"
+            "Ladybug"
         );
 
-        flyStrategy = new FlyMovementStrategy(
-            rb, animator,
-            maxSpeed, maxAngularSpeed,
-            flyMaxHeight,
-            "Bee"
-        );
+        flyStrategy = new FlyMovementStrategy(rb, animator, maxSpeed, maxAngularSpeed, flyMaxHeight, "Ladybug");
     }
 
     void Update()
     {
         if (!isMounted) return;
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (canFly && Input.GetKeyDown(KeyCode.Space))
             StartCoroutine(StartFlight());
     }
+
 
     void FixedUpdate()
     {
@@ -59,41 +63,33 @@ public class BeeMovement : RideableBugBase
             Debug.Log("Skill is not available (still active or cooling down).");
             yield break;
         }
-
         flyStrategy.SetFlying(true);
 
-        yield return new WaitForSeconds(flyTimeLimit);
+        yield return SkillWithCooldown(
+            flyTimeLimit,
+            skillCooldown,
+            () => UIManager.Instance.ShowSkillActive(flyActiveSprite),
+            () => {
+                flyStrategy.SetFlying(false);
+                UIManager.Instance.ShowSkillCooldown(flyCooldownSprite);
+            }
+        );
 
-        flyStrategy.SetFlying(false);
-
-        // 자동 착지 및 언마운트
-        animator?.SetTrigger("is_dropping");
-        GetComponentInChildren<PlayerMovement>()?.ForceFallFromBug();
-        SetMounted(false); 
+        UIManager.Instance.HideAllSkillUI();
     }
+
 
     public override void SetMounted(bool mounted)
     {
         base.SetMounted(mounted);
 
-        if (!mounted)
+        if (mounted)
+            UIManager.Instance.ShowSkillAvailable(flyReadySprite);
+        else
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
-            AudioManager.Instance?.StopObstacle(); // Turn off _Enter sound
-            Destroy(transform.root.gameObject, 2f);
-        }
-    }
-
-    protected override void OnCollisionEnter(Collision col)
-    {
-        if (!isMounted) return;
-
-        if (col.gameObject.CompareTag("Obstacle"))
-        {
-            AudioManager.Instance?.PlayBug("Bee_Collide");
-            Destroy(col.gameObject);
+            UIManager.Instance.HideAllSkillUI();
         }
     }
 }
-

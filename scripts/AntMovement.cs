@@ -88,3 +88,4 @@ public class AntMovement : RideableBugBase
 
         UIManager.Instance.HideAllSkillUI(); 
     }
+}
