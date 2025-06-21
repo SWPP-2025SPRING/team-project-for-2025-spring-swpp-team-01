@@ -65,8 +65,13 @@ public class ButterflyMovement : RideableBugBase
         yield return SkillWithCooldown(
             flyTimeLimit,
             skillCooldown,
-            null,
-            () => flyStrategy.SetFlying(false)
+            () => UIManager.Instance.ShowSkillActive("fly"),
+            () =>
+            {
+                flyStrategy.SetFlying(false);
+                UIManager.Instance.ShowSkillCooldown("fly");
+            },
+            "fly"
         );
     }
 
@@ -74,14 +79,14 @@ public class ButterflyMovement : RideableBugBase
     {
         base.SetMounted(mounted);
 
-        if (!mounted)
+        if (mounted)
+            UIManager.Instance.OnMountSkillUI("fly");
+        else
         {
             flyStrategy.SetFlying(false);
             animator?.SetBool("is_walking", false);
             AudioManager.Instance?.StopObstacle(); // Turn off _Enter sound
+            UIManager.Instance.HideAllSkillUI();
         }
-        // else // Mount되자마자 자동 비행 시작
-        //     StartCoroutine(StartFlight());
-        
     }
 }

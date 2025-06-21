@@ -64,15 +64,22 @@ public class BeetleMovement : RideableBugBase
 
         flyStrategy.SetFlying(true);
 
-        yield return new WaitForSeconds(flyTimeLimit);
+        float timer = flyTimeLimit;
+        while (timer > 0f)
+        {
+            UIManager.Instance.UpdateSkillActiveTime(timer);
+            timer -= Time.deltaTime;
+            yield return null;
+        }
 
         flyStrategy.SetFlying(false);
-        
+
         // 자동 착지 및 언마운트
         animator?.SetTrigger("is_dropping");
         GetComponentInChildren<PlayerMovement>()?.ForceFallFromBug();
-        SetMounted(false); 
+        SetMounted(false);
     }
+
 
     public override void SetMounted(bool mounted)
     {
@@ -81,6 +88,8 @@ public class BeetleMovement : RideableBugBase
         if (mounted)
         {
             AudioManager.Instance?.PlayObstacle("Beetle_Enter");
+            UIManager.Instance.OnMountSkillUI("fly");
+            UIManager.Instance.ShowSkillActive("fly");
         }
         else
         {
@@ -88,6 +97,7 @@ public class BeetleMovement : RideableBugBase
             animator?.SetBool("is_walking", false);
             AudioManager.Instance?.StopObstacle();
             Destroy(transform.root.gameObject, 2f);
+            UIManager.Instance.HideAllSkillUI();
         }
     }
 

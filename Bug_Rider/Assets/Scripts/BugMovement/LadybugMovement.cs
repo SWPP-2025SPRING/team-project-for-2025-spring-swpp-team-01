@@ -68,14 +68,16 @@ public class LadybugMovement : RideableBugBase
         yield return SkillWithCooldown(
             flyTimeLimit,
             skillCooldown,
-            () => UIManager.Instance.ShowSkillActive(flyActiveSprite),
-            () => {
+            () => UIManager.Instance.ShowSkillActive("fly"),
+            () =>
+            {
                 flyStrategy.SetFlying(false);
-                UIManager.Instance.ShowSkillCooldown(flyCooldownSprite);
-            }
+                UIManager.Instance.ShowSkillCooldown("fly");
+            },
+            "fly"
         );
 
-        UIManager.Instance.HideAllSkillUI();
+        // UIManager.Instance.HideAllSkillUI();
     }
 
 
@@ -84,7 +86,9 @@ public class LadybugMovement : RideableBugBase
         base.SetMounted(mounted);
 
         if (mounted)
-            UIManager.Instance.ShowSkillAvailable(flyReadySprite);
+            UIManager.Instance.OnMountSkillUI("fly");
+
+
         else
         {
             flyStrategy.SetFlying(false);

@@ -14,7 +14,7 @@ public class AudioManager : MonoBehaviour
     }
 
     public List<AudioEntry> audioEntries;
-
+    public string whichBGM = "Stage1"; 
     private Dictionary<string, AudioConfig> audioDict;
     public AudioSource bgmSource;
     public AudioSource bugSource;
@@ -52,7 +52,7 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         Debug.Log("Starting BGM");
-        PlayBGM("Stage1");
+        PlayBGM(whichBGM);
     }
 
 

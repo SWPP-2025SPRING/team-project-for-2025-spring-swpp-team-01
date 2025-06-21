@@ -26,7 +26,7 @@ public class PlayerMovement : MonoBehaviour
     public float acceleration = 20f;
     public float maxSpeed = 3f;
     public float angularAcceleration = 200f;
-    public float maxAngularSpeed = 180f;
+    public float maxAngularSpeed = 30f;
     public float obstacleCheckDist = 0.8f;
     public LayerMask obstacleMask;
     private Rigidbody rb;

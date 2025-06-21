@@ -36,9 +36,10 @@ public class AntMovement : RideableBugBase
     public override void SetMounted(bool mounted)
     {
         base.SetMounted(mounted);
+        Debug.Log("[AntMovement] SetMounted " + mounted);
 
         if (mounted)
-            UIManager.Instance.ShowSkillAvailable(dashReadySprite);
+            UIManager.Instance.OnMountSkillUI("dash");
         else
             UIManager.Instance.HideAllSkillUI();
     }
@@ -46,7 +47,7 @@ public class AntMovement : RideableBugBase
     void Update()
     {
         if (!isMounted) return;
-        if (Input.GetKeyDown(KeyCode.LeftShift))
+        if (Input.GetKeyDown(KeyCode.Space))
             StartCoroutine(Dash());
     }
 
@@ -78,13 +79,12 @@ public class AntMovement : RideableBugBase
             dashCooldown,
             () => {
                 animator?.SetTrigger("is_dashing");
-                UIManager.Instance.ShowSkillActive(dashActiveSprite);
             },
             () => {
                 isDashing = false;
-                UIManager.Instance.ShowSkillCooldown(dashCooldownSprite);
-            }
+                UIManager.Instance.ShowSkillCooldown("dash");
+            },
+            "dash"
         );
-
-        UIManager.Instance.HideAllSkillUI(); 
     }
+}
