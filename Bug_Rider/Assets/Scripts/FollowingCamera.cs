@@ -20,3 +20,4 @@ public class FollowingCamera : MonoBehaviour
         transform.LookAt(camera_aim);
     }
 }
+

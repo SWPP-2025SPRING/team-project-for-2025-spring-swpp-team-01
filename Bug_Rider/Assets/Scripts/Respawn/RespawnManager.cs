@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.EventSystems;
 public class RespawnManager : MonoBehaviour
 {
     public Transform[] respawnPoints;
@@ -76,6 +77,35 @@ public class RespawnManager : MonoBehaviour
             other.gameObject.SetActive(false);
             Destroy(other.gameObject);
         }
+    }
+    public void RespawnByContext()
+    {
+        EventSystem.current?.SetSelectedGameObject(null);
+        bool isRiding = playerMovement != null && playerMovement.isMounted;
+        if (isRiding)
+        {
+            // 버그에서 떨어뜨리고 한 프레임 뒤에 리스폰
+            StartCoroutine(RespawnAfterUnmount(player));
+        }
+        else
+        {
+            RespawnPlayer();
+        }
+    }
+    private IEnumerator RespawnAfterUnmount(GameObject targetPlayer)
+    {
+        if (targetPlayer == null) yield break;
+        // 1) 언마운트 먼저 수행
+        animator.SetBool("is_riding_on_bug", false);
+        var mov = targetPlayer.GetComponent<PlayerMovement>();
+        if (mov != null) mov.ForceFallFromBug();
+        // 2) 다음 프레임까지 대기 (LateUpdate 이후)
+        yield return null;
+        // 3) 부모가 여전히 존재하면 강제로 떼어냄
+        if (targetPlayer.transform.parent != null)
+            targetPlayer.transform.SetParent(null, true);
+        // 4) 기존 리스폰 로직 호출
+        RespawnPlayer();
     }
     public void SetRespawnIndex(int index)
     {
@@ -170,20 +200,24 @@ public class RespawnManager : MonoBehaviour
     }
     private IEnumerator SnapSmokeNextFrame(Transform playerTf)
     {
-        var smokeCtrl = smoke.GetComponent<SmokeMovement>();
-        // SmokeMovement 비활성화 → 강제 위치 이동 중 이동 방지
-        if (smokeCtrl != null)
+        if(smoke != null)
         {
-            smokeCtrl.enabled = false;
-            smokeCtrl.target = playerTf; // 대상 설정은 미리 해놓음
+            var smokeCtrl = smoke.GetComponent<SmokeMovement>();
+            // SmokeMovement 비활성화 → 강제 위치 이동 중 이동 방지
+            if (smokeCtrl != null)
+            {
+                smokeCtrl.enabled = false;
+                smokeCtrl.target = playerTf; // 대상 설정은 미리 해놓음
+            }
+            yield return null; // :흰색_확인_표시: 1 프레임 대기 (리스폰 반영 후)
+            // 최신 forward를 반영한 위치로 이동
+            Vector3 newPos = playerTf.position - 5f * playerTf.forward;
+            if(smoke != null)
+                smoke.transform.position = newPos;
+            Debug.Log($"[SnapSmoke] Moved smoke to {newPos}");
+            if (smokeCtrl != null)
+                smokeCtrl.enabled = true;
         }
-        yield return null; // :흰색_확인_표시: 1 프레임 대기 (리스폰 반영 후)
-        // 최신 forward를 반영한 위치로 이동
-        Vector3 newPos = playerTf.position - 5f * playerTf.forward;
-        smoke.transform.position = newPos;
-        Debug.Log($"[SnapSmoke] Moved smoke to {newPos}");
-        if (smokeCtrl != null)
-            smokeCtrl.enabled = true;
     }
     // 이동 잠금
     private void LockMovement()
