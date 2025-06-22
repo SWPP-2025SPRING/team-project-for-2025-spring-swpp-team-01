@@ -10,7 +10,6 @@ public class LadybugMovement : RideableBugBase
     public LayerMask obstacleMask;
     private bool canFly = true;
 
-
     private WalkMovementStrategy walkStrategy;
     private FlyMovementStrategy flyStrategy;
 
@@ -22,6 +21,7 @@ public class LadybugMovement : RideableBugBase
     protected override void Awake()
     {
         base.Awake();
+        mesh = transform.Find("Armature");
 
         walkStrategy = new WalkMovementStrategy(
             rb, animator, obstacleMask,
@@ -36,6 +36,7 @@ public class LadybugMovement : RideableBugBase
 
     void Update()
     {
+        base.RotateMesh();
         if (!isMounted) return;
         if (canFly && Input.GetKeyDown(KeyCode.Space))
             StartCoroutine(StartFlight());
@@ -51,9 +52,16 @@ public class LadybugMovement : RideableBugBase
         bool s = Input.GetKey(KeyCode.Space);
 
         if (flyStrategy.IsFlying)
+        {
             flyStrategy.HandleMovement(h, v, s);
+            Debug.Log(1);
+        }
         else
+        {
             walkStrategy.HandleMovement(h, v);
+            Debug.Log(2);
+        }
+            
     }
 
     IEnumerator StartFlight()
@@ -68,14 +76,16 @@ public class LadybugMovement : RideableBugBase
         yield return SkillWithCooldown(
             flyTimeLimit,
             skillCooldown,
-            () => UIManager.Instance.ShowSkillActive(flyActiveSprite),
-            () => {
+            () => UIManager.Instance.ShowSkillActive("fly"),
+            () =>
+            {
                 flyStrategy.SetFlying(false);
-                UIManager.Instance.ShowSkillCooldown(flyCooldownSprite);
-            }
+                UIManager.Instance.ShowSkillCooldown("fly");
+            },
+            "fly"
         );
 
-        UIManager.Instance.HideAllSkillUI();
+        // UIManager.Instance.HideAllSkillUI();
     }
 
 
@@ -84,7 +94,9 @@ public class LadybugMovement : RideableBugBase
         base.SetMounted(mounted);
 
         if (mounted)
-            UIManager.Instance.ShowSkillAvailable(flyReadySprite);
+            UIManager.Instance.OnMountSkillUI("fly");
+
+
         else
         {
             flyStrategy.SetFlying(false);

@@ -12,15 +12,16 @@ public class FlyMovementStrategy
     float initialY;
     public bool IsFlying => isFlying;
     public float FlightTime => flightTimer;
-    private string bugName;  // ✅ 추가됨
-
+    private bool initialAscend;
+    private string bugName;  // :흰색_확인_표시: 추가됨
     public FlyMovementStrategy(
         Rigidbody rb,
         Animator animator,
         float flySpeed,
         float flyRotationSpeed,
         float maxHeight,
-        string bugName, // ✅ 추가됨
+        string bugName, // :흰색_확인_표시: 추가됨
+        bool initialAscend = true,
         float ascendForce = 18f)
     {
         this.rb = rb;
@@ -30,6 +31,7 @@ public class FlyMovementStrategy
         this.maxHeight = maxHeight;
         this.ascendForce = ascendForce;
         this.bugName = bugName;
+        this.initialAscend = initialAscend;
     }
     public void SetFlying(bool value)
     {
@@ -40,14 +42,15 @@ public class FlyMovementStrategy
             initialY = rb.position.y;
             animator?.ResetTrigger("is_drop");           // 추가
             animator?.SetBool("is_flying", true);
-            AudioManager.Instance?.PlayBug($"{bugName}_Fly");
+            AudioManager.Instance?.StopBug();
+            AudioManager.Instance?.PlayBugSkill($"{bugName}_Fly");
         }
         else
         {
             isFlying = false;
             animator?.SetBool("is_flying", false);
             animator?.SetTrigger("is_drop");
-            AudioManager.Instance?.StopBug();
+            AudioManager.Instance?.StopBugAll();
         }
     }
     public void HandleMovement(float h, float v, bool isSpace)
@@ -63,7 +66,6 @@ public class FlyMovementStrategy
             rb.MoveRotation(rb.rotation * Quaternion.Euler(0, turn, 0));
         }
         animator.speed = baseFlySpeed * speedFactor;
-
         /* 입력이 있을 때만 이동 */
         Vector3 flatVel = Vector3.zero;
         if (Mathf.Abs(v) > 0.01f)
@@ -73,7 +75,7 @@ public class FlyMovementStrategy
         }
         rb.velocity = new Vector3(flatVel.x, rb.velocity.y, flatVel.z);
         /* 상승 */
-        if (isSpace)
+        if ((initialAscend && flightTimer < 1f) || isSpace)
         {
             float remain = Mathf.Max(0f, maxHeight - (rb.position.y - initialY));
             if (remain > 0f)
