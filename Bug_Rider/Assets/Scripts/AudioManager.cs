@@ -14,10 +14,14 @@ public class AudioManager : MonoBehaviour
     }
 
     public List<AudioEntry> audioEntries;
-
+    public string whichBGM = "Stage1";
     private Dictionary<string, AudioConfig> audioDict;
     public AudioSource bgmSource;
     public AudioSource bugSource;
+    public AudioSource bugSkillSource;
+
+    public AudioSource bugBGMSource;
+    public AudioSource playerSource;
     public AudioSource obstacleSource;
 
     public float bgmFadeDuration = 1.5f;
@@ -26,7 +30,11 @@ public class AudioManager : MonoBehaviour
 
     private Coroutine bgmFadeCoroutine;
     private Coroutine bugCoroutine;
+    private Coroutine bugSkillCoroutine;
+    private Coroutine bugBGMCoroutine;
+    private Coroutine playerCoroutine;
     private Coroutine obstacleCoroutine;
+
 
     void Awake()
     {
@@ -52,7 +60,7 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         Debug.Log("Starting BGM");
-        PlayBGM("Stage1");
+        PlayBGM(whichBGM);
     }
 
 
@@ -100,7 +108,12 @@ public class AudioManager : MonoBehaviour
     public void PlayBug(string key, bool loop = false)
     {
         if (!audioDict.ContainsKey(key)) return;
+
         AudioConfig config = audioDict[key];
+        
+        // 중복 재생 방지 조건
+        if (bugSource.isPlaying && bugSource.clip == config.clip && bugSource.loop == loop)
+            return;
 
         if (bugCoroutine != null)
             StopCoroutine(bugCoroutine);
@@ -116,6 +129,87 @@ public class AudioManager : MonoBehaviour
         if (bugCoroutine != null)
             StopCoroutine(bugCoroutine);
         StartCoroutine(FadeOutAndStop(bugSource, fadeOutTime));
+    }
+
+    // ---------------- Bug Skill Sound ----------------
+
+    public void PlayBugSkill(string key, bool loop = false)
+    {
+        if (!audioDict.ContainsKey(key)) return;
+        AudioConfig config = audioDict[key];
+
+        if (bugSkillCoroutine != null)
+            StopCoroutine(bugSkillCoroutine);
+
+        Debug.Log("[AudioManager] PlayBugSkill: " + key);
+        bugSkillCoroutine = StartCoroutine(PlaySoundCoroutine(bugSkillSource, config, loop));
+    }
+
+    public void StopBugSkill()
+    {
+        Debug.Log("[AudioManager] StopBugSkill");
+
+        if (bugCoroutine != null)
+            StopCoroutine(bugCoroutine);
+        StartCoroutine(FadeOutAndStop(bugSkillSource, fadeOutTime));
+    }
+    // ---------------- BugBGM Sound ----------------
+
+    public void PlayBugBGM(string key, bool loop = true)
+    {
+        if (!audioDict.ContainsKey(key)) return;
+        AudioConfig config = audioDict[key];
+
+        if (bugBGMCoroutine != null)
+            StopCoroutine(bugBGMCoroutine);
+
+        Debug.Log("[AudioManager] PlayBugBGM: " + key);
+        bugBGMCoroutine = StartCoroutine(PlaySoundCoroutine(bugBGMSource, config, loop));
+    }
+
+    public void StopBugBGM()
+    {
+        Debug.Log("[AudioManager] StopBugGM");
+
+        if (bugBGMCoroutine != null)
+            StopCoroutine(bugBGMCoroutine);
+        StartCoroutine(FadeOutAndStop(bugBGMSource, fadeOutTime));
+    }
+
+    public void StopBugAll()
+    {
+        Debug.Log("[AudioManager] StopBugAll");
+
+        StopBug();
+        StopBugSkill();
+        StopBugBGM();
+    }
+
+    // ---------------- Player Sound ----------------
+
+    public void PlayPlayer(string key, bool loop = false)
+    {
+        if (!audioDict.ContainsKey(key)) return;
+        AudioConfig config = audioDict[key];
+
+        // 중복 재생 방지 조건
+        if (playerSource.isPlaying && playerSource.clip == config.clip && playerSource.loop == loop)
+            return;
+
+        if (playerCoroutine != null)
+            StopCoroutine(playerCoroutine);
+
+        Debug.Log("[AudioManager] PlayBug: " + key);
+        playerCoroutine = StartCoroutine(PlaySoundCoroutine(playerSource, config, loop));
+    }
+
+    public void StopPlayer()
+    {
+        Debug.Log("[AudioManager] StopBug");
+
+        if (playerCoroutine != null)
+            StopCoroutine(playerCoroutine);
+        StartCoroutine(FadeOutAndStop(playerSource, fadeOutTime));
     }
 
     // ---------------- Obstacle Sound ----------------
@@ -173,7 +267,7 @@ public class AudioManager : MonoBehaviour
     private IEnumerator FadeIn(AudioSource source, float targetVolume, float duration)
     {
         float t = 0f;
-        source.volume = 0.1f;  
+        source.volume = 0.1f;
 
         while (t < duration)
         {

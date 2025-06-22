@@ -26,7 +26,7 @@ public class PlayerMovement : MonoBehaviour
     public float acceleration = 20f;
     public float maxSpeed = 3f;
     public float angularAcceleration = 200f;
-    public float maxAngularSpeed = 180f;
+    public float maxAngularSpeed = 30f;
     public float obstacleCheckDist = 0.8f;
     public LayerMask obstacleMask;
     private Rigidbody rb;
@@ -34,17 +34,22 @@ public class PlayerMovement : MonoBehaviour
     public bool isMounted = false;
     public Transform mountedBug;
     private bool isFalling = false;
+    private bool isGrounded = true;
     private Vector3 velocity;
     private Vector3 mountedLocalPos;
     private Quaternion mountedLocalRot;
     // 추가: walk 전략
     private WalkMovementStrategy walkStrategy;
+    private Quaternion meshRot = Quaternion.Euler(0f, 0f, 0f);
+    private Transform mesh;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         rb.freezeRotation = true;
         rb.isKinematic = false;
+        meshRot = Quaternion.Euler(-90f, 0f, 0f);
+        mesh = transform.Find("metarig");
         walkStrategy = new WalkMovementStrategy(
             rb,
             animator,
@@ -61,14 +66,24 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isMounted)
         {
-            if (Input.GetKeyDown(KeyCode.E)) Unmount();
+            if (Input.GetKeyDown(KeyCode.R)) 
+            {
+                GameObject bugToDestroy = mountedBug.gameObject;  // 여기서 선언
+                Unmount();  // 기존 함수 그대로 사용
+                
+                if (bugToDestroy != null)
+                {
+                    Destroy(bugToDestroy, 1.0f);
+                }
+            }
             return;
         }
         if (mountCooldown) return;
-        if (Input.GetKeyDown(KeyCode.E)) TryMount();
+        if (Input.GetKeyDown(KeyCode.R)) TryMount();
     }
     void FixedUpdate()
     {
+        RotateMesh();
         if (isMounted || isFalling) return;
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
@@ -80,6 +95,26 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.localPosition = mountedLocalPos;
             transform.localRotation = mountedLocalRot;
+        }
+    }
+    void RotateMesh()
+    {
+        RaycastHit hit;
+        isGrounded = Physics.Raycast(
+            rb.position + Vector3.up * 0.05f, // 약간 띄워서 Ray 시작
+            Vector3.down,
+            out hit,
+            0.3f
+        );
+        if (isGrounded && mesh != null)
+        {
+            Debug.Log("[] Ground normal: " + hit.normal);
+            Vector3 normal = hit.normal;
+            Vector3 projectedForward = Vector3.ProjectOnPlane(rb.transform.forward, normal).normalized;
+            Quaternion targetRotation = Quaternion.LookRotation(projectedForward, normal);
+            // mesh.rotation = targetRotation * meshRot;
+            Quaternion finalRotation = targetRotation * meshRot;
+            mesh.rotation = Quaternion.Slerp(mesh.rotation, finalRotation, Time.fixedDeltaTime * 10f);
         }
     }
     void TryCallBug()
@@ -172,10 +207,16 @@ public class PlayerMovement : MonoBehaviour
         animator.SetBool("is_riding_on_bug", true);
         if (bug.TryGetComponent<RideableBugBase>(out var rideable))
             rideable.SetMounted(true);
+        // Turn off PlayerSound
+        AudioManager.Instance?.StopPlayer();
+        walkStrategy.isWalkingSoundPlaying = false;
+        BugRideTracker.Instance.Register(tag);
+
     }
     public void Unmount()
     {
         if (!isMounted || mountedBug == null) return;
+        // Transform bugToDestroy = destroyBug ? mountedBug : null; // destroy할 Bug 설정
         isMounted = false;
         Vector3 unmountDir = (-mountedBug.forward + Vector3.up).normalized;
         transform.SetParent(null);
@@ -189,7 +230,21 @@ public class PlayerMovement : MonoBehaviour
             rideable.SetMounted(false);
         mountedBug = null;
         StartCoroutine(MountCooldownRoutine());
+        // // 벌레 삭제 (언마운트 완료 후)
+        // if (bugToDestroy != null)
+        // {
+        //     StartCoroutine(DestroyBugAfterDelay(bugToDestroy.gameObject, 0.1f));
+        // }
     }
+    // IEnumerator DestroyBugAfterDelay(GameObject bug, float delay)
+    // {
+    //     yield return new WaitForSeconds(delay);
+    //     if (bug != null)
+    //     {
+    //         Debug.Log($"[Unmount] Destroying bug: {bug.name}");
+    //         Destroy(bug);
+    //     }
+    // }
     IEnumerator EnableColliderAfterDelay(CapsuleCollider col, float delay)
     {
         yield return new WaitForSeconds(delay);

@@ -1,4 +1,5 @@
 using UnityEngine;
+
 public class WalkMovementStrategy
 {
     private Rigidbody rb;
@@ -12,11 +13,9 @@ public class WalkMovementStrategy
     private bool useAcceleration;
     private bool useAngularAcceleration;
     private float currentAngularSpeed = 0f;
-
-    private string bugName;  // ✅ 추가됨
-    private bool isWalkingSoundPlaying = false;
-
-
+    private string bugName;
+    public bool isWalkingSoundPlaying = false;
+    
     public WalkMovementStrategy(
         Rigidbody rb,
         Animator animator,
@@ -26,7 +25,7 @@ public class WalkMovementStrategy
         float angularAcceleration,
         float maxAngularSpeed,
         float obstacleCheckDist,
-        string bugName, // ✅ 추가됨
+        string bugName,
         bool useAcceleration = true,
         bool useAngularAcceleration = false
     )
@@ -42,10 +41,21 @@ public class WalkMovementStrategy
         this.bugName = bugName;
         this.useAcceleration = useAcceleration;
         this.useAngularAcceleration = useAngularAcceleration;
-    }
 
+        rb.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.centerOfMass = new Vector3(0, -1.0f, 0);
+    }
+    
     public void HandleMovement(float h, float v)
     {
+        RaycastHit hit;
+        bool isGrounded = Physics.Raycast(
+            rb.position + Vector3.up * 0.05f,
+            Vector3.down,
+            out hit,
+            0.3f
+        );
+
         // 각가속도/즉시회전
         if (Mathf.Abs(h) > 0.01f)
         {
@@ -65,60 +75,62 @@ public class WalkMovementStrategy
         }
         else
         {
-            currentAngularSpeed = Mathf.MoveTowards(currentAngularSpeed, 0f, angularAcceleration * Time.fixedDeltaTime);
+            currentAngularSpeed = 0f;
         }
-        // 가속도 적용 (이전과 동일)
-        if (Mathf.Abs(v) > 0.01f)
-        {
-            Vector3 forward = rb.rotation * Vector3.forward;
-            Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
-            if (!Physics.SphereCast(rayOrigin, 0.4f, forward, out _, obstacleCheckDist, obstacleMask))
-            {
-                if (useAcceleration)
-                {
-                    rb.AddForce(forward * v * acceleration, ForceMode.Acceleration);
-                }
-                else
-                {
-                    Vector3 targetVelocity = forward * v * maxSpeed;
-                    Vector3 velocityChange = targetVelocity - new Vector3(rb.velocity.x, 0, rb.velocity.z);
-                    rb.AddForce(velocityChange, ForceMode.VelocityChange);
-                }
-            }
-        }
-        // 최대 속도 제한(수평만)
-        Vector3 flatVel = new Vector3(rb.velocity.x, 0, rb.velocity.z);
-        if (flatVel.magnitude > maxSpeed)
-        {
-            Vector3 limited = flatVel.normalized * maxSpeed;
-            rb.velocity = new Vector3(limited.x, rb.velocity.y, limited.z);
-        }
-        // animator?.SetBool("is_walking", flatVel.magnitude > 0.1f);
-        // if (flatVel.magnitude > 0.1f && bugName != "Player")
-        //     AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
-        // else if(bugName != "Player") AudioManager.Instance?.StopBug();
-        bool isWalking = flatVel.magnitude > 0.1f;
-        animator?.SetBool("is_walking", isWalking);
+        
+        // rb.y 고정
+        Quaternion uprightRotation = Quaternion.FromToRotation(rb.transform.up, Vector3.up) * rb.rotation;
+        rb.MoveRotation(uprightRotation);
 
-        if (bugName != "Player")
+        // 가속도 적용
+        if (Mathf.Abs(v) > 0.01f && isGrounded)
         {
-            if (isWalking)
+            Vector3 rayOrigin = rb.position + Vector3.up * 0.3f;
+            Vector3 forward = rb.rotation * Vector3.forward;
+            if (useAcceleration)
             {
-                if (!isWalkingSoundPlaying)
-                {
-                    AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
-                    isWalkingSoundPlaying = true;
-                }
+                rb.AddForce(forward * v * acceleration, ForceMode.Acceleration);
             }
             else
             {
-                if (isWalkingSoundPlaying)
+                Vector3 targetVelocity = forward * v * maxSpeed;
+                Vector3 velocityChange = targetVelocity - new Vector3(rb.velocity.x, 0, rb.velocity.z);
+                rb.AddForce(velocityChange, ForceMode.VelocityChange);
+            }
+            
+            // 최대 속도 제한
+            float speed = rb.velocity.magnitude;
+            Vector3 normVel = rb.velocity.normalized;
+            float dot = Vector3.Dot(rb.velocity, forward);
+            if (dot < 0) // 뒤로 이동 중
+            {
+                if (speed > maxSpeed * 0.5f)
                 {
-                    AudioManager.Instance?.StopBug();
-                    isWalkingSoundPlaying = false;
+                    rb.velocity = normVel * (maxSpeed * 0.2f);
+                }
+            }
+            else // 앞으로 이동
+            {
+                if (speed > maxSpeed)
+                {
+                    rb.velocity = normVel * maxSpeed;
                 }
             }
         }
+        
+        float flatVel = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
+        bool isWalking = flatVel > 0.1f;
+        animator?.SetBool("is_walking", isWalking);
 
+        if (isWalking)
+        {
+            if (bugName != "Player") AudioManager.Instance?.PlayBug($"{bugName}_Walk", true);
+                else AudioManager.Instance?.PlayPlayer($"{bugName}_Walk", true);
+        }
+        else
+        {
+            if (bugName != "Player") AudioManager.Instance?.StopBug();
+                else AudioManager.Instance?.StopPlayer();
+        }
     }
 }
