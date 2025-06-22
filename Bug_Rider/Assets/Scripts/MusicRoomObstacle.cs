@@ -1,50 +1,40 @@
 using UnityEngine;
 using System.Collections;
-
 /// <summary>
-/// ¿ùµå ÁÂÇ¥ ±âÁØÀ¸·Î minHeight~maxHeight »çÀÌ¸¦ ¿Õº¹ÇÏ´Â Àå¾Ö¹° (Rigidbody ¾øÀÌ)
-/// »ó½Â/³«ÇÏ ¼Óµµ´Â À§Ä¡ ±â¹İ ½Ãµå·Î °³Ã¼¸¶´Ù ´Ş¶óÁü
+/// ì›”ë“œ ì¢Œí‘œ ê¸°ì¤€ìœ¼ë¡œ minHeight~maxHeight ì‚¬ì´ë¥¼ ì™•ë³µí•˜ëŠ” ì¥ì• ë¬¼ (Rigidbody ì—†ì´)
+/// ìƒìŠ¹/ë‚™í•˜ ì†ë„ëŠ” ìœ„ì¹˜ ê¸°ë°˜ ì‹œë“œë¡œ ê°œì²´ë§ˆë‹¤ ë‹¬ë¼ì§
 /// </summary>
 public class MusicRoomObstacle : MonoBehaviour
 {
-    [Header("Y ÁÂÇ¥ ¹üÀ§ (world units)")]
-    public float minHeight = 6.57f;   // Àı´ë Y ÁÂÇ¥
-    public float maxHeight = 8f;   // Àı´ë Y ÁÂÇ¥
-
-    [Header("»ó½Â / ³«ÇÏ ½Ã°£ ¹üÀ§ (ÃÊ)")]
+    [Header("Y ì¢Œí‘œ ë²”ìœ„ (world units)")]
+    public float minHeight = 6.57f;   // ì ˆëŒ€ Y ì¢Œí‘œ
+    public float maxHeight = 8f;   // ì ˆëŒ€ Y ì¢Œí‘œ
+    [Header("ìƒìŠ¹ / ë‚™í•˜ ì‹œê°„ ë²”ìœ„ (ì´ˆ)")]
     public Vector2 ascendTimeRange = new Vector2(1f, 3f);
     public Vector2 dropTimeRange = new Vector2(0.15f, 0.4f);
-
-    [Header("²À´ë±â / ¹Ù´Ú Á¤Áö ½Ã°£ (ÃÊ)")]
+    [Header("ê¼­ëŒ€ê¸° / ë°”ë‹¥ ì •ì§€ ì‹œê°„ (ì´ˆ)")]
     public float holdTimeTop = 0.2f;
     public float holdTimeBottom = 0.2f;
-
-    private Vector3 basePosition;  // X, Z´Â °íÁ¤
-
+    private Vector3 basePosition;  // X, ZëŠ” ê³ ì •
     void Awake()
     {
         basePosition = new Vector3(transform.position.x, 0f, transform.position.z);
     }
-
     void Start()
     {
         int seed = HashPosition(transform.position);
         System.Random prng = new System.Random(seed);
-
         float ascendDuration = Mathf.Lerp(ascendTimeRange.x, ascendTimeRange.y, (float)prng.NextDouble());
         float dropDuration = Mathf.Lerp(dropTimeRange.x, dropTimeRange.y, (float)prng.NextDouble());
-
         StartCoroutine(LiftDropLoop(ascendDuration, dropDuration));
     }
-
     private IEnumerator LiftDropLoop(float ascendDur, float dropDur)
     {
-        // ½ÃÀÛ À§Ä¡: minHeight
+        // ì‹œì‘ ìœ„ì¹˜: minHeight
         transform.position = new Vector3(basePosition.x, minHeight, basePosition.z);
-
         while (true)
         {
-            // »ó½Â: minHeight ¡æ maxHeight
+            // ìƒìŠ¹: minHeight â†’ maxHeight
             for (float t = 0f; t < 1f; t += Time.deltaTime / ascendDur)
             {
                 float y = Mathf.Lerp(minHeight, maxHeight, t);
@@ -53,8 +43,7 @@ public class MusicRoomObstacle : MonoBehaviour
             }
             transform.position = new Vector3(basePosition.x, maxHeight, basePosition.z);
             yield return new WaitForSeconds(holdTimeTop);
-
-            // ³«ÇÏ: maxHeight ¡æ minHeight
+            // ë‚™í•˜: maxHeight â†’ minHeight
             for (float t = 0f; t < 1f; t += Time.deltaTime / dropDur)
             {
                 float y = Mathf.Lerp(maxHeight, minHeight, t);
@@ -65,14 +54,12 @@ public class MusicRoomObstacle : MonoBehaviour
             yield return new WaitForSeconds(holdTimeBottom);
         }
     }
-
     private int HashPosition(Vector3 pos)
     {
         int xi = Mathf.RoundToInt(pos.x * 1000f);
         int zi = Mathf.RoundToInt(pos.z * 1000f);
         return xi * 73856093 ^ zi * 83492791;
     }
-
     void OnDrawGizmosSelected()
     {
         Vector3 baseXZ = new Vector3(transform.position.x, 0f, transform.position.z);
